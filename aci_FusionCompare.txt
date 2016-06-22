@@ -1,0 +1,150 @@
+/*
+    Rule:  aci_FusionCompare
+    
+    Author:  Steve Nuffer
+	
+    Date:  May 23, 2016
+    Version:  1.7
+ 
+    Compares fusion data to Identity Data
+    Set IIQDisabled
+
+*/
+import org.apache.jmeter.services.FileServer;
+import org.apache.log4j.Logger;
+import sailpoint.object.*;
+import sailpoint.tools.Util;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import org.apache.commons.io.FileUtils;
+import java.io.File;
+import java.io.IOException;
+
+// Declare a logger class
+Logger logger = Logger.getLogger("com.aci.rule.aci_FusionCompare");
+
+String identityName  = object.getDisplayName();
+String acctNetworkID = object.getStringAttribute("NETWORK_ID");
+String acctPersonID = object.getStringAttribute("PERSON_ID");
+String acctEmail = object.getStringAttribute("EMPLOYEE_EMAIL");
+String isEmployee = object.getStringAttribute("CURRENT_EMPLOYEE_FLAG");
+String acctPersonIndex = object.getStringAttribute("PERSON_ID_INDEX");
+String acctEmailIndex  = object.getStringAttribute("WORK_EMAIL_INDEX");
+if ( !Util.isNotNullOrEmpty(acctEmailIndex) ) acctEmailIndex = "";
+
+String identityStartDate = object.getStringAttribute("EMP_START_DATE");
+String effectiveDate = "";
+
+//Set up Date formats
+DateFormat dateFileFormat = new SimpleDateFormat("yyyyMMdd.HHmmss.S");
+DateFormat dateEffectiveFormat = new SimpleDateFormat("yyyy/MM/dd");
+DateFormat dateStartDateFormat = new SimpleDateFormat("MM-dd-yyyy");
+
+Date currentDate = new Date();
+Date startDate = dateStartDateFormat.parse(identityStartDate);
+
+// Compare Current date and Start date
+if ( currentDate.after(startDate) ) {
+    // Use Current Date
+    logger.debug("CurrentDate: " + dateFileFormat.format(currentDate) + "  :  " + dateFileFormat.format(startDate));
+    effectiveDate = dateEffectiveFormat.format(currentDate);
+} else {
+    // Use Start Date
+    logger.debug("StartDate: " + dateFileFormat.format(currentDate) + "  :  " + dateFileFormat.format(startDate));    
+    effectiveDate = dateEffectiveFormat.format(startDate); 
+}
+
+String csvBaseDir = "\\\\cov6nas02\\slpprdxfr\\mft\\inbound\\working\\"; 
+
+logger.debug( identityName  + "(" + acctPersonID + ")" + isEmployee +" ");
+
+////////////////////////////////////////
+// Find the current networkID assigned to the identity
+//
+QueryOptions qoNetworkID = new QueryOptions();
+qoNetworkID.addFilter(Filter.eq("personId", acctPersonID));
+Iterator rowsNetworks = context.search(Identity.class, qoNetworkID,Util.asList("networkId"));
+
+if (null != rowsNetworks) {
+    while (rowsNetworks.hasNext()) {
+        String networkID = (String) rowsNetworks.next()[0];
+
+        // Update only if not null/empty, length is bigger 0 and doesn't match HR
+        if ( Util.isNotNullOrEmpty(networkID) && networkID.length() > 0 && ! networkID.equalsIgnoreCase(acctNetworkID) ) {
+            // NetworkID is different
+            logger.debug("    Create - Network: " + networkID + "=" + acctNetworkID); 
+
+            String csvFileName = csvBaseDir + "network." + dateFileFormat.format(currentDate) + ".txt";
+
+            // Create the File handle
+            File csvFile = new File(csvFileName);
+            try
+            {    
+                fileWriter = new PrintWriter( new FileOutputStream( csvFile ));
+            }
+            catch ( Exception e )
+            {
+                // User doesn't have permission to write  
+                logger.debug("error on fileWriter");    
+            }          
+            fileWriter.println("MERGE|Worker|" + acctPersonID + "|Global Data Elements|" + networkID + "|" + acctPersonIndex + "|" + effectiveDate + "|4712/12/31");
+                            
+            // Close File handles
+            fileWriter.flush();
+            fileWriter.close();            
+        }
+    }   
+}
+sailpoint.tools.Util.flushIterator(rowsNetworks); 
+
+////////////////////////////////////////
+//  Find the current email assigned to the identity
+// 
+QueryOptions qoEmail = new QueryOptions();
+qoEmail.addFilter(Filter.eq("personId", acctPersonID));
+Iterator rowsEmail = context.search(Identity.class, qoEmail,Util.asList("email"));
+
+if (null != rowsEmail) {
+
+
+    while (rowsEmail.hasNext()) {
+        String email = (String) rowsEmail.next()[0];
+        logger.debug("    Compare - Email: " + email + "=" + acctEmail);
+        
+        // Update only if not null/empty, length is bigger 0 and doesn't match HR
+        if ( Util.isNotNullOrEmpty(email) && email.length() > 0 && ! email.equalsIgnoreCase(acctEmail) ) {
+            logger.debug("    Create - Email: " + email + "=" + acctEmail);
+            
+            String csvFileName = csvBaseDir + "email." + dateFileFormat.format(currentDate) + ".txt";
+
+            // Create the File handle
+            File csvFile = new File(csvFileName);
+            try
+            {    
+                fileWriter = new PrintWriter( new FileOutputStream( csvFile ));
+            }
+            catch ( Exception e )
+            {
+                // User doesn't have permission to write  
+                logger.debug("error on fileWriter");    
+            }
+            fileWriter.println("MERGE|PersonEmail|" + acctEmailIndex + "|" + acctPersonIndex + "|" + acctPersonID + "|" + effectiveDate + "|4712/12/31|W1|" + email + "|Y");
+                            
+            // Close File handles
+            fileWriter.flush();
+            fileWriter.close();            
+        }    
+    }   
+}
+sailpoint.tools.Util.flushIterator(rowsEmail);
+
+//
+// Check the status of the individual and set the IIQDisabled appropriately
+if ( "N".equalsIgnoreCase(isEmployee) ) {
+    // Ex 
+    object.put("IIQDisabled", true);  
+} else {
+    // Current
+    object.put("IIQDisabled", false);  
+}
+return object;
