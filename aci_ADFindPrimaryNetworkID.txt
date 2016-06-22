@@ -1,0 +1,43 @@
+/*
+    Rule:  aci_ADFindPrimaryNetworkID
+    
+    Author:  Steve Nuffer
+	
+    Date:  June 22, 2016
+    Version:  1.3
+
+*/
+import org.apache.log4j.Logger; 
+import sailpoint.object.*;
+
+Logger logger = Logger.getLogger("com.aci.rule.aci_ADFindPrimary");
+ 
+String tmpPrimary = "";
+String identitytName  = identity.getDisplayName();
+String appName = link.getApplicationName();
+
+try {
+     Application app = link.getApplication();
+    List acctLinkLists = identity.getLinks(app);
+
+    // Does this identity have any accounts in this application
+    if (null != acctLinkLists){
+        // For each account, find the Primary
+        for (Link acctLink : acctLinkLists){
+            String acctSamName = acctLink.getAttribute("sAMAccountName");
+            String acctMail = acctLink.getAttribute("mail");
+            String acctType = acctLink.getAttribute("accountType");
+            
+            if ( acctType.equalsIgnoreCase("personal-primary")) {
+                logger.debug("P: (email) identitytName=" + identitytName + "  appName=" + appName + " acctSamName=" + acctSamName + " acctMail=" + acctMail);
+   
+                tmpPrimary=acctSamName ;
+            }
+        }
+    }
+} catch(Exception e) {
+    logger.error("aci_ADFindPrimaryNetworkID - exception");
+}
+
+if ( Util.isNotNullOrEmpty(tmpPrimary) )
+    return tmpPrimary;
