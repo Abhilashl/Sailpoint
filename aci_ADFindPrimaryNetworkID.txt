@@ -11,9 +11,9 @@ import org.apache.log4j.Logger;
 import sailpoint.object.*;
 import sailpoint.tools.Util;
 
-Logger logger = Logger.getLogger("com.aci.rule.aci_ADFindPrimary");
+Logger logger = Logger.getLogger("com.aci.rule.aci_ADFindPrimaryNetworkID");
  
-String tmpPrimary = "";
+String tmpPrimary = null;
 String identitytName  = identity.getDisplayName();
 String appName = link.getApplicationName();
 
@@ -30,9 +30,9 @@ try {
             String acctType = acctLink.getAttribute("accountType");
             
             if ( acctType.equalsIgnoreCase("personal-primary")) {
-                logger.debug("P: (email) identitytName=" + identitytName + "  appName=" + appName + " acctSamName=" + acctSamName + " acctMail=" + acctMail);
+                logger.debug("P: (networkID) identitytName=" + identitytName + "  appName=" + appName + " acctSamName=" + acctSamName + " acctMail=" + acctMail);
    
-                tmpPrimary=acctSamName ;
+                tmpPrimary=acctSamName;
             }
         }
     }
