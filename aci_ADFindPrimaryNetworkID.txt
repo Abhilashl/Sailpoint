@@ -9,6 +9,7 @@
 */
 import org.apache.log4j.Logger; 
 import sailpoint.object.*;
+import sailpoint.tools.Util;
 
 Logger logger = Logger.getLogger("com.aci.rule.aci_ADFindPrimary");
  
