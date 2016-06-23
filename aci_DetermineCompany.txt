@@ -1,0 +1,31 @@
+/*
+    Rule:  aci_DetermineCompany
+    
+    Author:  Steve Nuffer
+	
+    Date:  June 5, 2016
+    Version:  1.0
+
+*/
+import org.apache.log4j.Logger; 
+import sailpoint.object.*;
+import sailpoint.tools.Util;
+
+Logger logger = Logger.getLogger("com.aci.rule.aci_DetermineCompany");
+
+String personType = identity.getAttribute("personType");
+String vendor = link.getAttribute("VENDOR");
+
+logger.debug("personType=" + personType);
+
+// Employee or Contingent
+if ( personType.toLowerCase().contains("contingent") ) {
+    if ( Util.isNotNullOrEmpty(vendor) ) {
+        logger.debug("vendor=" + vendor);
+        return vendor;
+    } else {
+        return "";
+    }
+} else {
+    return "ACI Worldwide, Inc.";
+}
