@@ -1,0 +1,21 @@
+/*
+    Rule:  aci_LegalOrKnownAs
+    
+    Author:  Steve Nuffer
+	
+    Date:  June 16, 2016
+    Version:  1.0
+
+*/
+
+import sailpoint.tools.Util;
+
+String firstName = link.getAttribute("FIRST_NAME");
+//String lastName = link.getAttribute("LAST_NAME");
+
+String knownAs = link.getAttribute("KNOWN_AS");
+
+if ( Util.isNotNullOrEmpty(knownAs) )
+    return knownAs;
+else
+    return firstName;
