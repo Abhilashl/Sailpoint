@@ -1,0 +1,46 @@
+/*
+    Rule:  aci_NameSpace
+    
+    Author:  Steve Nuffer
+	
+    Date:  June 21, 2016
+    Version:  1.0
+ */
+import org.apache.log4j.Logger;  
+import org.apache.log4j.Level;  
+   
+Logger logger = Logger.getLogger("com.aci.rule.aci_NameSpace");  
+logger.debug("Listing Variables passed to Beanshell namespace:");  
+  
+// BeanShell has a "this.variables" array that we can access.  
+for (int i = 0 ; i < this.variables.length ; i++) {  
+  
+   String varName = this.variables[i];  
+  
+   Object varValue = null;  
+   try {  
+      if ("transient".equals(varName)) {  
+         varValue = "[reserved word]";  
+      } else {  
+         varValue = eval(varName);  
+      }    
+   } catch (Exception ex) {  
+      varValue = "[eval exception]";  
+   }  
+  
+   String varClass = "void";  
+   if ((void != varValue) && (null != varValue)) {  
+      varClass = varValue.getClass().getSimpleName();  
+   }  
+  
+   if (void == varValue) {  
+       logger.debug(varName + " = void");  
+   } else if (null == varValue) {  
+       logger.debug(varName + " = null");  
+   } else {  
+       logger.debug(varName + ": " + varClass + " = " + varValue);  
+   }  
+  
+}  
+   
+return;  
