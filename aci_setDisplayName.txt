@@ -1,0 +1,18 @@
+/*
+    Rule:  aci_setDisplayName
+    
+    Author:  Steve Nuffer
+	
+    Date:  June 24, 2016
+    Version:  1.0
+
+*/
+
+import sailpoint.tools.Util;
+
+String firstName = identity.getFirstname();
+String lastName = identity.getLastname() ;
+
+String displayName = lastName + ", " + firstName;
+
+return displayName;
