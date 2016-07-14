@@ -9,10 +9,17 @@
 */
 
 import sailpoint.tools.Util;
+import org.apache.log4j.Logger; 
+
+Logger logger = Logger.getLogger("com.aci.rule.aci_setDisplayName");
 
 String firstName = identity.getFirstname();
 String lastName = identity.getLastname() ;
 
 String displayName = lastName + ", " + firstName;
+
+logger.debug("target.getApplication()" + target.getApplication());
+logger.debug("target.getApplication().getName=" + target.getApplication().getName());
+logger.debug("getKey()=" + target.getKey());
 
 return displayName;
