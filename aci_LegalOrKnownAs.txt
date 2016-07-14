@@ -3,15 +3,14 @@
     
     Author:  Steve Nuffer
 	
-    Date:  June 16, 2016
-    Version:  1.0
+    Date:  June 27, 2016
+    Version:  1.1
 
 */
 
 import sailpoint.tools.Util;
 
 String firstName = link.getAttribute("FIRST_NAME");
-//String lastName = link.getAttribute("LAST_NAME");
 
 String knownAs = link.getAttribute("KNOWN_AS");
 
