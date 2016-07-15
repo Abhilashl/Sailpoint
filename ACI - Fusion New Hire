@@ -1,0 +1,829 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<!DOCTYPE Workflow PUBLIC "sailpoint.dtd" "sailpoint.dtd">
+<Workflow created="1465341321653" explicitTransitions="true" id="8a8596e4551bf08d01552d2621b503f6" libraries="Identity,IdentityRequest" modified="1468529247073" monitored="true" name="ACI - Fusion New Hire" type="IdentityLifecycle">
+  <Variable name="plan">
+    <Description>The provisioning plan, which is built by a service method.</Description>
+  </Variable>
+  <Variable initializer="string:false" name="optimisticProvisioning">
+    <Description>Set to true to enable optimistic provisioning.  This will cause
+changes to the entitlements compiled from role assignments to be 
+applied immediately to the identity cube rather than waiting
+for the next refresh/reaggregation after the provisioning system
+completes the request.</Description>
+  </Variable>
+  <Variable initializer="string:false" name="foregroundProvisioning">
+    <Description>Normally provisioning is done in a step that uses the &amp;quot;background&amp;quot;
+option to force the workflow to be suspend and be resumed in a
+background task thread.  This prevents the browser session from
+hanging since provision can sometimes take a long time.  For demos
+and testing it can be better to do this in the foreground so that
+provisioning will have been performed when control is returned to the
+user.  This prevents having to run the Perform Maintenance task to 
+see the resutls of the request.</Description>
+  </Variable>
+  <Variable initializer="string:wasif.noor@aciworldwide.com" input="true" name="fallbackApprover">
+    <Description>A String that specifies the name of the Identity that will 
+be assigned any approvals where the owner of the approver 
+can&amp;#39;t be resolved. Example if the scheme is &amp;quot;owner&amp;quot; and the 
+	application doesn&amp;#39;t specify and owner.</Description>
+  </Variable>
+  <Variable input="true" name="identityName">
+    <Description>The name of the identity.</Description>
+  </Variable>
+  <Variable initializer="true" input="true" name="trace"/>
+  <RuleLibraries>
+    <Reference class="sailpoint.object.Rule" id="8a8596e4537c17b50153cdda16d3129a" name="aci_Library"/>
+  </RuleLibraries>
+  <Step icon="Start" monitored="true" name="Start" posX="42" posY="216" wait="1">
+    <Transition to="Update Fields"/>
+  </Step>
+  <Step icon="Task" monitored="true" name="Update Fields" posX="136" posY="218" resultVariable="complete">
+    <Script>
+      <Source>/*
+    Workflow:  ACI - Fusion New Hire
+    Step:  Update Fields
+
+    Date:  June 5, 2016
+    Version:  1.0
+    
+ */
+import org.apache.log4j.Logger;
+import sailpoint.object.*;
+//import sailpoint.aci.util.ACIUtil;
+import java.sql.Connection;  
+import java.sql.DriverManager;  
+import java.sql.PreparedStatement;  
+import java.sql.ResultSet;  
+import java.sql.SQLException;  
+import java.sql.Statement;  
+
+Logger  logger = Logger.getLogger("com.aci.wf.joiner");
+logger.debug("ACI - Fusion New Hire Request(Update Fields)");
+logger.debug("identity: "+identityName);
+
+Identity identityObject = context.getObjectByName(Identity.class, identityName);
+
+String firstname = identityObject.getAttribute("firstname");
+String lastname = identityObject.getAttribute("lastname");
+String knownas = identityObject.getAttribute("KNOWN_AS");
+String middlename = identityObject.getAttribute("MIDDLE_NAME");
+String email = identityObject.getAttribute("email");
+logger.debug("Firstname: "+firstname+" Lastname: "+lastname+" Known as: "+knownas+" MI: "+middlename+" Email: "+email);
+if ( Util.isEmpty(firstname) || Util.isEmpty(lastname) ) {
+   return false;
+}
+//ACIUtil.testMethod();
+
+String personId = identityObject.getAttribute("personId");
+//String newEmail = ACIUtil.getNewEmailAddress(identityObject);
+String newEmail = identityObject.getName();
+
+if ( !Util.isEmpty(newEmail) ) {
+   newEmail = newEmail.toLowerCase();
+   newEmail = newEmail.replaceAll(" ","");
+} 
+String newNetworkId = getNewNetworkId(identityObject);
+
+if ( !Util.isEmpty(newNetworkId) ) {
+   newNetworkId = newNetworkId.toLowerCase();
+   newNetworkId = newNetworkId.replaceAll(" ","");
+}
+String phone = identityObject.getAttribute("WORK_TELEPHONE");
+String oracleUsername = identityObject.getAttribute("oracleUsername");
+if ( Util.isEmpty(phone) ) {
+   phone="Waiting update";
+}
+logger.debug("New email: " + newEmail.toLowerCase());
+logger.debug("New networkId: " + newNetworkId);
+
+identityObject.setAttribute("networkId", newNetworkId);
+identityObject.setAttribute("email", newEmail);
+context.saveObject(identityObject);
+
+workflow.put("newNetworkId", newNetworkId);
+workflow.put("newEmail", newEmail);
+
+return true;
+
+</Source>
+    </Script>
+    <Transition to="Stop" when="script:complete==false"/>
+    <Transition to="Create Account Request" when="script:complete==true"/>
+  </Step>
+  <Step icon="Message" monitored="true" name="Create Account Request" posX="289" posY="212" resultVariable="plan">
+    <Description>Process the user that joined and create plan for the user. Create AD, SF and Clarity accounts for new "employees".</Description>
+    <Script>
+      <Source>/*
+    Workflow:  ACI - Fusion New Hire
+    Step:  Create Account Request
+    
+    Date:  June 9, 2016
+    Version:  1.0
+*/
+import sailpoint.object.*;
+import sailpoint.api.*;
+import sailpoint.aci.util.ACIUtil;
+import sailpoint.tools.Util;
+import java.util.*;
+import java.text.*;
+import org.apache.log4j.Logger;
+
+Logger logger = Logger.getLogger("com.aci.wf.joiner");
+logger.debug("ACI - Fusion New Hire Request(Create Account Request)");
+
+DateFormat dateFormatter = new SimpleDateFormat("MM/dd/yyyy HH:mm:ss");
+now = new Date();
+
+logger.debug("NewNetworkId: "+newNetworkId+" newEmail: "+ newEmail);
+
+ProvisioningPlan plan = new ProvisioningPlan();
+
+// Identity Attributes
+Identity identityObj = context.getObjectByName(Identity.class, identityName);
+String identityPersonID = identityObj.getAttribute("personId");
+String identityFname = identityObj.getFirstname();
+String identityLname = identityObj.getLastname();
+String identityMname = identityObj.getAttribute("MIDDLE_NAMES");
+String identityKnownAs = identityObj.getAttribute("KNOWN_AS");
+String identityDivision = identityObj.getAttribute("division");
+String identityTitle = identityObj.getAttribute("employeeTitle");
+String identityPerType = identityObj.getAttribute("personType");
+String identityDept = identityObj.getAttribute("DEPT_NAME");
+String identityLoc = identityObj.getAttribute("location");
+String identityCountry = identityObj.getAttribute("country");
+String identityStartDate = identityObj.getAttribute("EMP_START_DATE");
+String identityEndDate = identityObj.getAttribute("enterpriseEndDate");
+
+//  Application attributes
+String identityAddress = "None";
+String identityCity = "None";
+String identityRegion = "None";
+String identityPostalCode = "None";
+
+
+// Get the AD OU from countryCodeMap
+Custom custom = context.getObjectByName(Custom.class,"countryCodeMap");
+String ou = custom.get(identityCountry);
+
+//Check if Null or empty
+if ( !Util.isNotNullOrEmpty(identityFname) ) identityFname = "None";
+if ( !Util.isNotNullOrEmpty(identityLname) ) identityLname = "None";
+if ( !Util.isNotNullOrEmpty(identityMname) ) identityMname = "None";
+if ( !Util.isNotNullOrEmpty(identityKnownAs) ) identityKnownAs = "None";
+if ( !Util.isNotNullOrEmpty(identityDivision) ) identityDivision = "None";
+if ( !Util.isNotNullOrEmpty(identityTitle) ) identityTitle = "None";
+if ( !Util.isNotNullOrEmpty(identityPerType) ) identityPerType = "None";
+if ( !Util.isNotNullOrEmpty(identityDept) ) identityDept = "None";
+if ( !Util.isNotNullOrEmpty(identityLoc) ) identityLoc = "None";
+if ( !Util.isNotNullOrEmpty(identityCountry) ) identityCountry = "None";
+if ( !Util.isNotNullOrEmpty(identityEndDate ) ) identityEndDate = "None";
+if ( !Util.isNotNullOrEmpty(ou) ) ou = "Unknown";
+
+
+logger.debug("[" + identityLname + ", " + identityFname + "(" + identityKnownAs + ")] {" + identityPersonID + "}");
+logger.debug("   Division:" + identityDivision + " Title:" + identityTitle + " PersonType:" + identityPerType);
+logger.debug("   Department:" + identityDept + " Location:" + identityLoc + " Country:" + identityCountry);
+logger.debug("   StartDate:" + identityStartDate + " ou:" + ou);
+
+//  Setup Notification Manager Email
+logger.debug("Manager Notification"); 
+Identity managerObj = identityObj.getManager();
+if (null != managerObj) {
+    managerApprover = managerObj.getName();
+    workflow.put("managerEmail", managerObj.getEmail());
+    workflow.put("managerName", managerObj.getDisplayableName());
+} else {
+    Identity idAdmin = context.getObjectByName(Identity.class, "spadmin");
+    managerApprover = "spadmin";
+    workflow.put("managerName", managerApprover);
+    if (null != idAdmin.getEmail()){
+        workflow.put("managerEmail", idAdmin.getEmail());
+    }
+}
+
+// Setup Notification to HR        
+logger.debug("HR Notification"); 
+if ( ou.equals("EMEA") ) {
+  logger.debug("mbox-emea");
+  workflow.put("hrEmail", "mbox-emea-orientation@aciworldwide.com");
+}else if ( ou.equals("AP") ) {
+  logger.debug("mbox-ap");
+  workflow.put("hrEmail","mbox-ap-ecn-hr@aciworldwide.com");
+}else {
+  logger.debug("mbox-am");
+   workflow.put("hrEmail", "mbox-am-orientation@aciworldwide.com");
+}
+workflow.put("employeeOU", ou);
+logger.debug("identityPerType=" + identityPerType);
+
+// Create accounts if PersonType is below
+switch ( identityPerType.toLowerCase() ) {
+    case "employee":
+    case "contingent worker":
+    case "rehire":
+    case "fixed term contract":
+
+        logger.debug("Employee... Create plan - " +  identityPerType);
+
+        /***********Check if accounts exists ****************
+        *****************************************************/
+
+        List lstLinks = identityObj.getLinks();
+        List applist = new ArrayList();
+        boolean isADAccountExists = false;
+        boolean isSFAccountExists = false;
+        boolean isClarityAccountExists = false;
+        String sAMAccountName = "";
+        String sfuser = "";
+        String appPrimaryAD = "DEV Active Directory tst.aciww.com";
+        String adNID = "";
+        String appSForce = "TST Salesforce";
+        String appClarity = "TST Clarity";
+        String appSourceOfRecord = "DEV Fusion HCM";
+
+        AccountRequest acctReq = new AccountRequest();
+
+        for(int x =0; x&lt;lstLinks.size();x++) {
+            Link aLink = (Link)lstLinks.get(x);
+            String appName=aLink.getApplication().getName();
+            logger.debug("Found application: "+appName+" for identity: "+identityName);
+      
+            if ( appName.equalsIgnoreCase(appSourceOfRecord) ) {
+                logger.debug("setting Location information");
+                identityAddress = aLink.getAttribute("ADDRESS_LINE_1");
+                identityCity = aLink.getAttribute("TOWN_OR_CITY");
+                identityRegion = aLink.getAttribute("REGION_2");
+                identityPostalCode = aLink.getAttribute("POSTAL_CODE");
+      
+                if ( !Util.isNotNullOrEmpty(identityAddress) ) identityAddress = "None";
+                if ( !Util.isNotNullOrEmpty(identityCity) ) identityCity = "None";
+                if ( !Util.isNotNullOrEmpty(identityRegion) ) identityRegion = "None";
+                if ( !Util.isNotNullOrEmpty(identityPostalCode) ) identityPostalCode = "None";
+      
+            } else if ( appName.equalsIgnoreCase(appPrimaryAD) ) {
+                isADAccountExists = true;
+                sAMAccountName = aLink.getAttribute("sAMAccountName");
+                adNID = aLink.getNativeIdentity();
+                acctReq.setOperation(AccountRequest.Operation.Enable);
+                acctReq.setApplication(appPrimaryAD);
+                acctReq.setNativeIdentity(adNID);
+                acctReq.add(new AttributeRequest("description",ProvisioningPlan.Operation.Add,"IIQ Joiner:  " + dateFormatter.format(now)));  
+
+                //Lower case sAMAccountName and UPN
+                String userPrincipalName = identityObj.email;
+                logger.debug("sAMAccountName: "+sAMAccountName+" userPrincipalName: "+userPrincipalName);
+                //acctReq.add(new AttributeRequest("sAMAccountName",ProvisioningPlan.Operation.Add, sAMAccountName.toLowerCase()));
+                acctReq.add(new AttributeRequest("userPrincipalName",ProvisioningPlan.Operation.Add, userPrincipalName.toLowerCase()));
+
+                String dn = adNID;
+                int dcindex=dn.indexOf("DC=");
+                String domain = dn.substring(dcindex+3, dn.indexOf(",", dcindex) );
+                logger.debug("Domain: "+domain);
+                workflow.put("domain", domain);
+                //move OU if in disabled
+            
+                if ( dn.contains("OU=Disabled Accounts") ) {
+                    String newou = dn.replace("OU=Users,OU=Disabled Accounts", "OU="+ou+",OU=UserAccounts").substring(dn.indexOf("OU=")) ;
+                    logger.debug("New OU: "+newou);
+
+                    acctReq.add(new AttributeRequest("AC_NewParent",ProvisioningPlan.Operation.Set, newou));
+                    String cn = aLink.getAttribute("cn");
+                    String newid="CN="+cn.replaceAll(",","\\,")+","+newou;
+                    aLink.setNativeIdentity(newid);
+                    aLink.setAttribute("distinguishedName", newid);
+                    aLink.setIdentity(identityObj);
+                    context.saveObject( aLink);
+                    context.commitTransaction();
+            }
+     
+            } else if ( appName.equalsIgnoreCase(appSForce) ) {
+                isSFAccountExists = true;
+                sfuser = aLink.getNativeIdentity();
+            } else if ( appName.equalsIgnoreCase(appClarity) ) {
+                isClarityAccountExists = true;
+            }
+        }	
+    /***************END**************/
+
+    /***********Create AD account ***********************
+    *****************************************************/
+    if ( isADAccountExists ) {
+
+    } else {
+        acctReq.setOperation(AccountRequest.Operation.Create);
+        acctReq.setApplication(appPrimaryAD);
+        sAMAccountName = "Dev"+newNetworkId;
+        logger.debug("sAMAccountName: "+sAMAccountName);
+
+        acctReq.add(new AttributeRequest("sAMAccountName",ProvisioningPlan.Operation.Add, sAMAccountName));  
+        //acctReq.add(new AttributeRequest("ObjectType",ProvisioningPlan.Operation.Add,"User"));  
+        //acctReq.add(new AttributeRequest("*password*",ProvisioningPlan.Operation.Add,"newP@$$word"));  
+        acctReq.add(new AttributeRequest("department", ProvisioningPlan.Operation.Add,identityObj.getAttribute("DEPT_NAME")));
+        logger.debug("Set AD department to "+identityObj.getAttribute("DEPT_NAME"));
+
+        if ( ! identityKnownAs.equalsIgnoreCase("none") ) {
+            logger.debug("Using identityKnownAs: " + identityKnownAs);
+            acctReq.add(new AttributeRequest("displayName",ProvisioningPlan.Operation.Add, identityLname +", "+ identityKnownAs ));
+        } else {
+            acctReq.add(new AttributeRequest("displayName",ProvisioningPlan.Operation.Add, identityLname +", "+ identityFname ));
+        }
+        
+        acctReq.add(new AttributeRequest("givenName",ProvisioningPlan.Operation.Add,identityFname ));
+        acctReq.add(new AttributeRequest("sn",ProvisioningPlan.Operation.Add,identityLname));
+        acctReq.add(new AttributeRequest("mail",ProvisioningPlan.Operation.Add,identityObj.email));
+        acctReq.add(new AttributeRequest("description",ProvisioningPlan.Operation.Add,"IIQ Joiner:  "+ dateFormatter.format(now)));
+        
+        // Add birthright groups
+        //
+        acctReq.add(new AttributeRequest("IIQDisabled",false));
+        //acctReq.setNativeIdentity( "CN="+identityName+",OU="+ou+",OU=UserAccounts,OU=Dev,DC=tst,DC=aciww,DC=com" );
+        //acctReq.setNativeIdentity( "CN="+identityObj.getLastname()+"\\, "+identityObj.getFirstname()+",OU="+ou+",OU=UserAccounts,OU=Dev,DC=tst,DC=aciww,DC=com" );
+        adNID = "CN="+identityObj.getLastname()+"\\, "+identityObj.getFirstname()+",OU=UserAccounts,OU=Dev,DC=tst,DC=aciww,DC=com";
+        acctReq.setNativeIdentity( adNID );
+        String dn = adNID;
+           int dcindex=dn.indexOf("DC=");
+           String domain = dn.substring(dcindex+3, dn.indexOf(",", dcindex) );
+           logger.debug("Domain: "+domain);
+        workflow.put("domain", domain);	
+           acctReq.add(new AttributeRequest("employeeId",ProvisioningPlan.Operation.Add,identityPersonID));
+        //acctReq.add(new AttributeRequest("employeeNumber",ProvisioningPlan.Operation.Add,employeeNum));
+        acctReq.add(new AttributeRequest("division",ProvisioningPlan.Operation.Add,identityDivision));
+        acctReq.add(new AttributeRequest("extensionAttribute10", ProvisioningPlan.Operation.Add,"Personal"));
+        acctReq.add(new AttributeRequest("extensionAttribute11", ProvisioningPlan.Operation.Add,"Active"));
+        acctReq.add(new AttributeRequest("mail",ProvisioningPlan.Operation.Add,identityObj.email));
+     
+        acctReq.add(new AttributeRequest("title",ProvisioningPlan.Operation.Add,identityObj.getAttribute("employeeTitle"))); 
+        acctReq.add(new AttributeRequest("physicalDeliveryOfficeName",ProvisioningPlan.Operation.Add,identityObj.getAttribute("location")));
+        acctReq.add(new AttributeRequest("userPrincipalName",ProvisioningPlan.Operation.Add,identityObj.email));
+        acctReq.add(new AttributeRequest("company",ProvisioningPlan.Operation.Add,"ACI Worldwide"));
+        acctReq.add(new AttributeRequest("pwdLastSet",ProvisioningPlan.Operation.Add,"true"));
+        String teleph =  identityObj.getAttribute("WORK_TELEPHONE");
+           if ( !Util.isEmpty(teleph) ) {
+              acctReq.add(new AttributeRequest("telephoneNumber",ProvisioningPlan.Operation.Add,teleph));
+          }
+            
+        //Add groups
+        List ADGroups = new ArrayList();
+        //ADGroups.add("CN=Domain ACSUsers,OU=Groups,OU=Omaha,OU=OU Central,OU=Dev,DC=tst,DC=aciww,DC=com");
+        ADGroups.add("CN=Domain Users,CN=Users,DC=tst,DC=aciww,DC=com");
+            acctReq.add(new AttributeRequest("memberOf",ProvisioningPlan.Operation.Add,ADGroups));
+            logger.debug("Done setting AD groups");
+    }
+
+        //Set AD managerObj
+    if ( managerObj != null ) {
+           String mgrdn = "";
+
+        List mlinks = managerObj.getLinks();
+        for ( int k=0; k&lt;mlinks.size(); k++ ) {
+            Link ml = mlinks.get(k);
+            
+            String mApp = ml.getApplication().getName();
+            if ( mApp.contains("tst.aciww.com") ) {
+                logger.debug("manager: "+ml.getNativeIdentity());
+                mgrdn = ml.getNativeIdentity();
+                if ( !Util.isEmpty(mgrdn) &amp;&amp; mApp.equalsIgnoreCase(appPrimaryAD)) {
+                   break;
+                }
+            }
+        }
+    /*    
+        IdentityService is = new IdentityService(context);
+
+        Application res = context.getObjectByName(Application.class, appPrimaryAD);
+        List appLinks = is.getLinks(manager, res);
+        String mgrdn = "";
+        if (appLinks!=null) {
+            if ( appLinks.size()>0 ) {
+                Link lk = appLinks.get(0);
+                mgrdn=lk.getNativeIdentity();
+            }
+        }
+    */	
+    logger.debug("AD manager: "+ mgrdn);
+    if ( !Util.isEmpty(mgrdn) )
+    acctReq.add(new AttributeRequest("manager",ProvisioningPlan.Operation.Add,mgrdn));
+    }
+    //
+
+    //Generate password
+    String policyName="AD Password Policy";
+    PasswordPolicy policy = context.getObjectByName(PasswordPolicy.class, policyName);
+
+    String adpassword = new PasswordGenerator(context).generatePassword(policy);
+    acctReq.add(new AttributeRequest("password",ProvisioningPlan.Operation.Add,adpassword));
+
+    plan.add(acctReq);
+    workflow.put("networkId", sAMAccountName);
+    workflow.put("adpassword", adpassword);
+    workflow.put("firstname", identityFname);
+    workflow.put("lastname", identityLname);
+    workflow.put("middlename", identityMname);
+    workflow.put("employeeEmail", identityObj.email);
+    workflow.put("knownas", identityKnownAs);
+    workflow.put("employeeTitle", identityTitle);
+    workflow.put("personType", identityPerType);
+    workflow.put("division", identityDivision);
+    workflow.put("department", identityDept);
+    workflow.put("location", identityLoc);
+    workflow.put("country", identityCountry);
+    workflow.put("startDate", identityStartDate);
+    workflow.put("endDate", identityEndDate );
+    workflow.put("address", identityAddress);
+    workflow.put("city", identityCity);
+    workflow.put("region", identityRegion);
+    workflow.put("postalCode", identityPostalCode);
+
+    logger.debug("....Done creating AD account request........");
+    /***********************************
+    *******SF Account provisioning******
+    ***********************************/
+    AccountRequest sfReq = new AccountRequest();
+    
+    String email = newEmail;
+
+    if ( isSFAccountExists ) {
+        sfReq.setOperation(AccountRequest.Operation.Enable);
+        sfReq.setApplication(appSForce);
+        sfReq.setNativeIdentity(sfuser);
+    } else {
+        sfReq.setOperation(AccountRequest.Operation.Create);
+        sfReq.setApplication(appSForce);
+
+        //String email = newEmail;
+        sfuser = identityObj.email+"test.full";
+        sfReq.setNativeIdentity(sfuser);
+        
+        sfReq.add(new AttributeRequest("email",ProvisioningPlan.Operation.Add,email));
+            //sfReq.add(new AttributeRequest("Username",ProvisioningPlan.Operation.Add,email));
+        String ln = identityObj.getLastname();
+        ln = ln.substring(0, ln.length()>8?8:ln.length()); //alias is required and has to be less than 8
+        sfReq.add(new AttributeRequest("Alias",ProvisioningPlan.Operation.Add,ln));
+            //sfReq.add(new AttributeRequest("Name",ProvisioningPlan.Operation.Add, identityObj.getFirstname()+" "+identityObj.getLastname()));
+        sfReq.add(new AttributeRequest("FirstName",ProvisioningPlan.Operation.Add,identityObj.getFirstname()));
+        sfReq.add(new AttributeRequest("LastName",ProvisioningPlan.Operation.Add,identityObj.getLastname()));
+            //sfReq.add(new AttributeRequest("ProfileName",ProvisioningPlan.Operation.Add,"ACI: ServiceDesk Staff Platform"));
+        sfReq.add(new AttributeRequest("ProfileName",ProvisioningPlan.Operation.Add,"ACI: ServiceDesk Client Platform"));
+        sfReq.add(new AttributeRequest("UserRoleName",ProvisioningPlan.Operation.Add,"Global Access"));
+        sfReq.add(new AttributeRequest("ReceivesAdminInfoEmails",ProvisioningPlan.Operation.Add,"false"));
+        sfReq.add(new AttributeRequest("ReceivesInfoEmails",ProvisioningPlan.Operation.Add,"false"));
+        sfReq.add(new AttributeRequest("UserPermissionsMarketingUser",ProvisioningPlan.Operation.Add,"false"));
+        sfReq.add(new AttributeRequest("UserPermissionsMobileUser",ProvisioningPlan.Operation.Add,"false"));
+        sfReq.add(new AttributeRequest("UserPermissionsOfflineUser",ProvisioningPlan.Operation.Add,"false"));
+        sfReq.add(new AttributeRequest("UserPermissionsSFContentUser",ProvisioningPlan.Operation.Add,"false"));
+            //sfReq.add(new AttributeRequest("UserType",ProvisioningPlan.Operation.Add,"Standard"));
+        sfReq.add(new AttributeRequest("TimeZoneSidKey",ProvisioningPlan.Operation.Add,"America/Chicago"));
+        sfReq.add(new AttributeRequest("LocaleSidKey",ProvisioningPlan.Operation.Add,"en_US"));
+        sfReq.add(new AttributeRequest("EmailEncodingKey",ProvisioningPlan.Operation.Add,"UTF-8"));
+        sfReq.add(new AttributeRequest("LanguageLocaleKey",ProvisioningPlan.Operation.Add,"en_US"));
+        sfReq.add(new AttributeRequest("Person_ID__c",ProvisioningPlan.Operation.Add,identityPersonID));
+
+        //
+        sfReq.add(new AttributeRequest("Department",ProvisioningPlan.Operation.Add,identityObj.getAttribute("DEPT_NAME")));
+        sfReq.add(new AttributeRequest("Title",ProvisioningPlan.Operation.Add,identityObj.getAttribute("employeeTitle")));
+        sfReq.add(new AttributeRequest("FederationIdentifier",ProvisioningPlan.Operation.Add, identityObj.email));
+
+        if ( managerObj != null ) {
+            logger.debug("SF manager email: "+managerObj.getEmail()+".full");
+            sfReq.add(new AttributeRequest("Manager_Email__c",ProvisioningPlan.Operation.Add, managerObj.getEmail()+".full"));
+        }
+        sfReq.add(new AttributeRequest("Rank__c",ProvisioningPlan.Operation.Add,identityObj.getAttribute("rank")));
+    }
+    plan.add(sfReq);
+
+    logger.debug("....Done creating SF account request........");
+
+    /***End SF account creation***/
+
+    /***********************************
+    *******Clarity Account provisioning******
+    **********************************/
+/*
+    AccountRequest clReq = new AccountRequest();
+
+    if ( isClarityAccountExists ) {
+        clReq.setOperation(AccountRequest.Operation.Enable);
+        clReq.setApplication(appClarity);
+        clReq.setNativeIdentity(email);
+    } else {
+
+        clReq.setOperation(AccountRequest.Operation.Create);
+        clReq.setApplication(appClarity);
+
+        //String email = "testing@aciworldwide.com";
+        clReq.setNativeIdentity(email);
+        clReq.add(new AttributeRequest("email",ProvisioningPlan.Operation.Add,email));
+        clReq.add(new AttributeRequest("Username",ProvisioningPlan.Operation.Add,email));
+
+        clReq.add(new AttributeRequest("FirstName",ProvisioningPlan.Operation.Add,identityObj.firstname));
+        clReq.add(new AttributeRequest("LastName",ProvisioningPlan.Operation.Add,identityObj.lastname));
+        clReq.add(new AttributeRequest("PersonId",ProvisioningPlan.Operation.Add,identityPersonID));
+    }
+    plan.add(clReq);
+    logger.debug("....Done creating Clarity account request........");
+*/
+    /***End Clarity account creation***/
+
+    plan.setIdentity(identityObj);
+
+    workflow.put("sfusername", sfuser);
+    //workflow.put("clusername", email);
+
+    logger.debug("Plan = " + plan.toXml());
+
+        break;
+    // All other PersonTypes
+    default:
+        logger.debug("Plan not created because PERSON_TYPE=" + identityPerType );
+        break;
+}
+
+return plan;</Source>
+    </Script>
+    <Transition to="Notify Remedyforce"/>
+  </Step>
+  <Step action="call:compileProvisioningProject" monitored="true" name="Compile Project" posX="519" posY="212" resultVariable="project">
+    <Arg name="requester" value="string:spadmin"/>
+    <Arg name="requireCreateTemplates" value="string:false"/>
+    <Arg name="identityName" value="ref:identityName"/>
+    <Arg name="noApplicationTemplates" value="string:true"/>
+    <Arg name="source" value="string:UI"/>
+    <Arg name="optimisticProvisioning" value="string:false"/>
+    <Arg name="plan" value="ref:plan"/>
+    <Description>Compile the provisioning plan into a provisioning project.
+If you need to pass in provisioner options like "noFiltering"
+or "noRoleDeprovisioning" you must pass them as explicit
+arguments to the call.
+The evaluation options "requester" and "source" are commonly
+set here.
+You can also pass things into the Template and Field scripts by
+defining Args in this step.</Description>
+    <Transition to="Provision"/>
+  </Step>
+  <Step action="call:provisionProject" icon="Provision" monitored="true" name="Provision" posX="616" posY="212">
+    <Arg name="background" value="string:false"/>
+    <Arg name="project" value="ref:project"/>
+    <Description>Provision the project.</Description>
+    <Transition to="Refresh Identity"/>
+  </Step>
+  <Step action="call:refreshIdentity" icon="Task" monitored="true" name="Refresh Identity" posX="707" posY="212" wait="1">
+    <Arg name="refreshLinks" value="script:return true;"/>
+    <Arg name="identityName" value="ref:identityName"/>
+    <Arg name="provision" value="string:true"/>
+    <Arg name="correlateEntitlements" value="string:true"/>
+    <Arg name="synchronizeAttributes" value="string:false"/>
+    <Description>Update the identity with anything we might have provisioned to applications</Description>
+    <Transition to="CheckForErrors"/>
+  </Step>
+  <Step monitored="true" name="CheckForErrors" posX="802" posY="212" resultVariable="hasADErrors">
+    <Script>
+      <Source>/*
+    Workflow:  ACI - Fusion New Hire Request
+    Step:  CheckForErrors
+*/
+import sailpoint.object.ProvisioningProject;
+import sailpoint.object.ProvisioningPlan;
+import sailpoint.object.ProvisioningResult;
+import sailpoint.tools.xml.XMLObjectFactory;
+import java.util.List;
+import java.util.ArrayList;
+import sailpoint.object.Identity;
+import sailpoint.object.Link;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import java.text.*;
+
+//private static Log customLogger= LogFactory.getLog("com.aci.wf.joiner"); 
+Logger logger = Logger.getLogger("com.aci.wf.joiner");
+logger.debug("ACI - Fusion New Hire Request(CheckForErrors)");
+  
+List prvPlans = project.getPlans();
+
+//list of application on which provisioning failed
+List failedApps = new ArrayList();
+
+//list of application on which provisioning was successful
+List successApps = new ArrayList();
+
+boolean  failedStatus =  false;
+if(prvPlans!=null){
+
+//checking if the provisioning status is completed or failed.
+//Checking the result status first at provisioning plan level then at account request level and finally at attribute request level to make sure that there is no error lost.
+for (ProvisioningPlan pl: prvPlans) {
+	if(pl.getAccountRequest("IIQ")==null){
+		if(pl.getApplicationNames()!=null){
+			ProvisioningResult result = null;
+			if(pl.getAccountRequests()!=null){
+			
+				if(pl.getAccountRequests().get(0).getResult()!=null){
+					
+					result = pl.getAccountRequests().get(0).getResult();
+				}
+			}
+			
+			if(pl.getResult()!=null){
+				result = pl.getResult();
+			}
+
+			if(result!=null){
+				if((result.getStatus()!=null) &amp;&amp; !(result.getStatus().equalsIgnoreCase("committed"))){
+					String appError = pl.getApplicationNames().toString();
+					if(result.getErrors()!=null){
+						appError = appError + " Error : " + result.getErrors().toString();
+					}
+					              
+					failedApps.add(appError);
+					failedStatus =true;
+				}
+				else{	
+					boolean noerrrorfound = true;
+					List attreqlist = pl.getAccountRequests().get(0).getAttributeRequests();
+					if(attreqlist!=null){
+						
+						 for(AttributeRequest attreq :attreqlist){
+							 if(attreq.getResult()!=null){
+								 attrresult= attreq.getResult().getStatus();
+								 if(!(attrresult.equalsIgnoreCase("committed"))){
+									String attrError = pl.getApplicationNames().toString();
+									if(attreq.getResult().getErrors()!=null){
+										attrError = attrError + " Error : " + attreq.getResult().getErrors().toString();
+									}
+									failedApps.add(attrError);
+									failedStatus =true;
+									logger.debug("Error --"+appError);
+									noerrrorfound=false;
+								 }
+							}
+						}
+					}
+					if(pl.getResult()!=null){
+						
+						if(pl.getResult().getErrors()!=null){
+							String prvError= pl.getApplicationNames().toString();
+							prvError = prvError + " Error : " + pl.getResult().getErrors().toString();
+							failedApps.add(prvError);
+							failedStatus =true;
+							noerrrorfound=false;
+						}
+					} 
+					if(noerrrorfound){
+						successApps.add(pl.getApplicationNames().get(0));
+					}
+				}
+			}
+		}
+	}
+}
+}
+SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMddHHmmss");
+Calendar cur_time = Calendar.getInstance();
+cur_time.setTime(new Date());
+String output = sdf.format(cur_time.getTime());
+context.startTransaction();  
+
+if(failedStatus){
+	logger.debug("+++++++++++++  -  Error: Failed to Provision with error :"+ prvError + "     +++++++++++++++++++++");
+
+}
+
+
+//return failedStatus;
+String sfApp = "TST Salesforce";
+if ( !successApps.contains(sfApp) ) {
+workflow.put("sfusername","");
+}
+//Check if AD failed 
+String srcApp = "DEV Active Directory tst.aciww.com";
+if ( successApps.contains(srcApp) ) {
+	return false;
+}else {
+	return true;
+}	
+	</Source>
+    </Script>
+    <Transition to="ErrNotify" when="script:hasADErrors==true"/>
+    <Transition to="Notify Manager" when="script:hasADErrors==false"/>
+  </Step>
+  <Step icon="Email" monitored="true" name="ErrNotify" posX="971" posY="320">
+    <Script>
+      <Source>
+  import java.util.ArrayList; 
+import java.util.Iterator; 
+import sailpoint.tools.Message;
+import org.apache.log4j.Logger;
+import sailpoint.object.EmailOptions;
+import sailpoint.object.EmailTemplate;
+ 
+Logger  logger = Logger.getLogger("com.aci.wf.joiner");
+ ArrayList messages = wfcase.getMessages(); 
+
+if (messages != null) {
+   logger.error("Error occurred in joiner workflow..."); 
+    //System.out.println("wfcase = " + wfcase.toXml()); 
+ 
+   Iterator iter = messages.iterator();   
+    while (iter.hasNext()) {
+            Message next = (Message) iter.next();
+            logger.error("Message = " + next.toString()); 
+      }
+EmailOptions options = new EmailOptions();
+
+EmailTemplate et = context.getObjectByName(EmailTemplate.class, "ACI - Error");
+options.setTo("mbox-idm-dev@aciworldwide.com");
+options.setSendImmediate(true);
+options.setNoRetry(true);
+options.setVariable("name", identityName);
+options.setVariable("list", messages);
+context.sendEmailNotification(et, options);
+
+}
+  </Source>
+    </Script>
+    <Transition to="Stop"/>
+  </Step>
+  <Step action="call:sendEmail" icon="Email" monitored="true" name="Notify Manager" posX="976" posY="118">
+    <Arg name="template" value="string:ACI - New Employee Manager Notification"/>
+    <Arg name="cc" value="ref:managerEmail"/>
+    <Arg name="country" value="ref:country"/>
+    <Arg name="sfusername" value="ref:sfusername"/>
+    <Arg name="firstname" value="ref:firstname"/>
+    <Arg name="ProvisioningPlan" value="ref:plan"/>
+    <Arg name="bcc" value="mbox-idm-dev@aciworldwide.com"/>
+    <Arg name="manager" value="ref:managerName"/>
+    <Arg name="nativeIdentity" value="ref:identityDisplayName"/>
+    <Arg name="lastname" value="ref:lastname"/>
+    <Arg name="clusername" value="ref:clusername"/>
+    <Arg name="identityDisplayName" value="ref:identityDisplayName"/>
+    <Arg name="employeeTitle" value="ref:employeeTitle"/>
+    <Arg name="employeeOU" value="ref:domain"/>
+    <Arg name="json" value="ref:json"/>
+    <Arg name="location" value="ref:location"/>
+    <Arg name="networkId" value="ref:networkId"/>
+    <Arg name="to" value="ref:hrEmail"/>
+    <Arg name="department" value="ref:department"/>
+    <Arg name="personType" value="ref:personType"/>
+    <Arg name="startDate" value="ref:startDate"/>
+    <Arg name="email" value="ref:employeeEmail"/>
+    <Transition to="Notify AD Pass to Manager"/>
+  </Step>
+  <Step action="call:sendEmail" icon="Email" monitored="true" name="Notify AD Pass to Manager" posX="1122" posY="118">
+    <Arg name="template" value="string:ACI - Network Password"/>
+    <Arg name="identityDisplayName" value="ref:identityDisplayName"/>
+    <Arg name="cc" value="mbox-idm-dev@aciworldwide.com"/>
+    <Arg name="firstname" value="ref:firstname"/>
+    <Arg name="ProvisioningPlan" value="ref:plan"/>
+    <Arg name="json" value="ref:json"/>
+    <Arg name="networkId" value="ref:networkId"/>
+    <Arg name="to" value="ref:managerEmail"/>
+    <Arg name="startDate" value="ref:startDate"/>
+    <Arg name="nativeIdentity" value="ref:identityDisplayName"/>
+    <Arg name="email" value="ref:employeeEmail"/>
+    <Arg name="lastname" value="ref:lastname"/>
+    <Transition to="Stop"/>
+  </Step>
+  <Step catches="complete" icon="Stop" monitored="true" name="Stop" posX="203" posY="355">
+    <Script>
+      <Source>
+import java.util.ArrayList; 
+import java.util.Iterator; 
+import sailpoint.tools.Message;
+import org.apache.log4j.Logger;
+import sailpoint.object.EmailOptions;
+import sailpoint.object.EmailTemplate;
+ 
+Logger  logger = Logger.getLogger("com.aci.wf.joiner");
+ ArrayList messages = wfcase.getMessages(); 
+
+if (messages != null) {
+   logger.error("Error occurred in joiner workflow..."); 
+    //System.out.println("wfcase = " + wfcase.toXml()); 
+ 
+   Iterator iter = messages.iterator();   
+    while (iter.hasNext()) {
+            Message next = (Message) iter.next();
+            logger.error("Message = " + next.toString()); 
+      }
+EmailOptions options = new EmailOptions();
+
+EmailTemplate et = context.getObjectByName(EmailTemplate.class, "ACI - Error");
+options.setTo("mbox-idm-dev@aciworldwide.com");
+options.setSendImmediate(true);
+options.setNoRetry(true);
+options.setVariable("name", identityName);
+options.setVariable("list", messages);
+context.sendEmailNotification(et, options);
+
+}
+      </Source>
+    </Script>
+  </Step>
+  <Step action="call:sendEmail" configForm="Provisioning Notification Step Form" icon="Email" monitored="true" name="Notify Remedyforce" posX="415" posY="212">
+    <Arg name="template" value="ACI - RemedyForce Joiner Email"/>
+    <Arg name="cc" value="mbox-idm-dev@aciworldwide.com"/>
+    <Arg name="identityName" value="ref:identityName"/>
+    <Arg name="plan" value="ref:plan"/>
+    <Description>Create a Incident Ticket in Remedyforce</Description>
+    <Transition to="Compile Project"/>
+  </Step>
+</Workflow>
