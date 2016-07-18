@@ -1,0 +1,97 @@
+/*
+    Rule:  aci_PrepareHCMFile
+    Author:  Steve Nuffer
+    
+    Date:  July 18, 2016		
+	Version: 1.2
+
+*/
+
+import org.apache.log4j.Logger; 
+import sailpoint.object.*;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import sailpoint.tools.Util;
+import org.apache.commons.io.FileUtils;
+import java.io.File;
+import java.io.IOException;
+
+// Declare a logger class
+Logger logger = Logger.getLogger("com.aci.rule.aci_PrepareHCMFile");
+//logger.debug("config=" + config);
+//Array String c[] = config;
+//logger.debug("c=" + c[0]);
+
+logger.debug("Computer: " + InetAddress.getLocalHost().getHostName() + "  User: " + System.getProperty("user.name"));
+
+//Destination file
+DateFormat dateFileFormat = new SimpleDateFormat("yyyyMMdd.HH.mm.ss");
+Date currentDate = new Date();
+
+String destFileName = "\\\\cov6nas02\\slpdevxfr\\mft\\outbound\\Sailpoint_To_HCM" + dateFileFormat.format(currentDate) + ".txt";
+String sourceDir = "\\\\cov6nas02\\slpdevxfr\\mft\\outbound\\";
+String importFile = null;
+
+
+// Source Directory
+//    Get a list of file names from a directory
+File directory = new File(sourceDir);
+String[] lstFileNames = directory.list();
+
+// Are there any files in the directory?
+if ( lstFileNames.length == 0 ) {
+    logger.debug("The directory is empty");
+} else {
+
+    //Sort the list of files
+    Arrays.sort(lstFileNames, Collections.reverseOrder());
+
+    int i = 0;
+
+    while ( lstFileNames.length > i )
+    {
+        if ( lstFileNames[i].toLowerCase().contains("hcm_to_sailpoint")) {
+            if ( Util.isNotNullOrEmpty(importFile)) {
+                // Import file found, move others
+                logger.debug("Move file: " + lstFileNames[i]);
+                
+                File sourceFile = new File(sourceDir + lstFileNames[i]);
+                File targetDir = new File(sourceDir + "archive\\");                 
+                
+                // Move the file
+                try {
+                    FileUtils.moveFileToDirectory(sourceFile, targetDir, true);
+                } catch (IOException e) {
+                    logger.debug(e);
+                }
+            }
+            else {
+                // Copy file
+                importFile = lstFileNames[i];   
+                logger.debug("File to import: " + importFile);
+               
+                File sourceFile = new File(sourceDir + importFile);
+                File targetFile = new File(sourceDir + "fusion_current.txt");
+                File targetDir = new File(sourceDir + "archive\\");      
+                
+                try {    
+                    FileUtils.deleteQuietly(targetFile);
+                    FileUtils.copyFile(sourceFile, targetFile);
+                    FileUtils.moveFileToDirectory(sourceFile, targetDir, true);
+                } catch(Exception e) {
+                    logger.debug(e);
+                }                
+            }
+        }
+        i++;
+    }
+}
+
+if ( Util.isNotNullOrEmpty(importFile))  {
+    logger.info("Import file = " + importFile); 
+    return importFile;
+}
+else {
+    logger.info("No HCM file found for import"); 
+    return "No file to import";
+}

@@ -3,8 +3,8 @@
     
     Author:  Steve Nuffer
 	
-    Date:  May 23, 2016
-    Version:  1.7
+    Date:  July 18, 2016
+    Version:  1.8
  
     Compares fusion data to Identity Data
     Set IIQDisabled
@@ -30,44 +30,34 @@ String acctEmail = object.getStringAttribute("EMPLOYEE_EMAIL");
 String isEmployee = object.getStringAttribute("CURRENT_EMPLOYEE_FLAG");
 String acctPersonIndex = object.getStringAttribute("PERSON_ID_INDEX");
 String acctEmailIndex  = object.getStringAttribute("WORK_EMAIL_INDEX");
-if ( !Util.isNotNullOrEmpty(acctEmailIndex) ) acctEmailIndex = "";
+String identityPerStartDate = object.getStringAttribute("PERSON_START_DATE");
 
-String identityStartDate = object.getStringAttribute("EMP_START_DATE");
-String effectiveDate = "";
+if ( !Util.isNotNullOrEmpty(acctEmailIndex) ) acctEmailIndex = "";
 
 //Set up Date formats
 DateFormat dateFileFormat = new SimpleDateFormat("yyyyMMdd.HHmmss.S");
-DateFormat dateEffectiveFormat = new SimpleDateFormat("yyyy/MM/dd");
-DateFormat dateStartDateFormat = new SimpleDateFormat("MM-dd-yyyy");
+DateFormat dateFMTyyyyMMdd = new SimpleDateFormat("yyyy/MM/dd");
+DateFormat dateFMTMMddyyyy = new SimpleDateFormat("MM-dd-yyyy");
 
 Date currentDate = new Date();
-Date startDate = dateStartDateFormat.parse(identityStartDate);
+Date startDate = dateFMTMMddyyyy.parse(identityPerStartDate);
 
-// Compare Current date and Start date
-if ( currentDate.after(startDate) ) {
-    // Use Current Date
-    logger.debug("CurrentDate: " + dateFileFormat.format(currentDate) + "  :  " + dateFileFormat.format(startDate));
-    effectiveDate = dateEffectiveFormat.format(currentDate);
-} else {
-    // Use Start Date
-    logger.debug("StartDate: " + dateFileFormat.format(currentDate) + "  :  " + dateFileFormat.format(startDate));    
-    effectiveDate = dateEffectiveFormat.format(startDate); 
-}
-
-String csvBaseDir = "\\\\cov6nas02\\slpprdxfr\\mft\\inbound\\working\\"; 
+String csvBaseDir = "\\\\cov6nas02\\slpdevxfr\\mft\\inbound\\working\\"; 
 
 logger.debug( identityName  + "(" + acctPersonID + ")" + isEmployee +" ");
-
+logger.debug("4");
 ////////////////////////////////////////
 // Find the current networkID assigned to the identity
 //
 QueryOptions qoNetworkID = new QueryOptions();
 qoNetworkID.addFilter(Filter.eq("personId", acctPersonID));
+
 Iterator rowsNetworks = context.search(Identity.class, qoNetworkID,Util.asList("networkId"));
 
 if (null != rowsNetworks) {
     while (rowsNetworks.hasNext()) {
         String networkID = (String) rowsNetworks.next()[0];
+        logger.debug("    Compare - NetworkId: " + networkID + "=" + acctNetworkID);
 
         // Update only if not null/empty, length is bigger 0 and doesn't match HR
         if ( Util.isNotNullOrEmpty(networkID) && networkID.length() > 0 && ! networkID.equalsIgnoreCase(acctNetworkID) ) {
@@ -87,7 +77,7 @@ if (null != rowsNetworks) {
                 // User doesn't have permission to write  
                 logger.debug("error on fileWriter");    
             }          
-            fileWriter.println("MERGE|Worker|" + acctPersonID + "|Global Data Elements|" + networkID + "|" + acctPersonIndex + "|" + effectiveDate + "|4712/12/31");
+            fileWriter.println("MERGE|Worker|" + acctPersonID + "|Global Data Elements|" + networkID + "|" + acctPersonIndex + "|" + dateFMTyyyyMMdd.format(startDate) + "|4712/12/31");
                             
             // Close File handles
             fileWriter.flush();
@@ -128,7 +118,14 @@ if (null != rowsEmail) {
                 // User doesn't have permission to write  
                 logger.debug("error on fileWriter");    
             }
-            fileWriter.println("MERGE|PersonEmail|" + acctEmailIndex + "|" + acctPersonIndex + "|" + acctPersonID + "|" + effectiveDate + "|4712/12/31|W1|" + email + "|Y");
+            
+            // Check to see if this a new email or an update?
+            if ( Util.isNotNullOrEmpty(acctEmailIndex) ) 
+                // Update
+                fileWriter.println("MERGE|PersonEmail|" + acctEmailIndex + "|" + acctPersonIndex + "|" + acctPersonID + "|||" + email + "|Y");
+            else
+                // New 
+                fileWriter.println("MERGE|PersonEmail|" + acctEmailIndex + "|" + acctPersonIndex + "|" + acctPersonID + "|" + dateFMTyyyyMMdd.format(startDate) + "|4712/12/31|W1|" + email + "|Y");
                             
             // Close File handles
             fileWriter.flush();
