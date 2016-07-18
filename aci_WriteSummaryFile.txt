@@ -1,0 +1,100 @@
+/*
+    Rule:  aci_CreateSummaryFile
+    Author:  Steve Nuffer
+		
+	Version: 1.2
+
+*/
+
+import org.apache.log4j.Logger; 
+import sailpoint.object.*;
+import java.io.*;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+
+// Declare a logger class
+Logger logger = Logger.getLogger("com.aci.rule.aci_CreateSummaryFile");
+//logger.debug("config=" + config);
+//Array String c[] = config;
+//logger.debug("c=" + c[0]);
+
+//Destination file
+DateFormat dateFileFormat = new SimpleDateFormat("yyyyMMdd.HH.mm.ss");
+Date currentDate = new Date();
+String destFileName = "\\\\cov6nas02\\slpprdxfr\\mft\\inbound\\Sailpoint_To_HCM" + dateFileFormat.format(currentDate) + ".txt";
+String sourceDir = "\\\\cov6nas02\\slpprdxfr\\mft\\inbound\\working\\";
+
+//writeToLog("\\\\nrc6nas02\\slpuatxfr\\mft\\activity.log", "it worked !");
+
+File destFile = new File(destFileName);
+
+//Delete the destination File
+destFile.delete();
+
+// Source Directory
+//    Get a list of file names from a directory
+File directory = new File(sourceDir);
+String[] lstFileNames = directory.list();
+
+// Are there any files in the directory?
+if (lstFileNames.length == 0) {
+    logger.debug("The directory is empty");
+} else {
+    // Open the file
+    FileWriter fstream = new FileWriter(destFileName, true);
+    BufferedWriter out = new BufferedWriter(fstream);
+
+    //Sort the list of files
+    Arrays.sort(lstFileNames);
+
+    //Create a summary file of all the individual files
+    String[] lstFilePrefix = new String[]{"network" , "email" , "phone"};
+    for (String filePrefix : lstFilePrefix) {
+        
+        boolean isHeader = false;
+        for (String fileName : lstFileNames ) {
+            if (fileName.toLowerCase().contains(filePrefix) ) {
+                // Check if header should be printed
+                if ( ! isHeader ) {
+                    // Print header
+                    isHeader = true;
+                    switch (filePrefix) {
+                        case "network":       
+                            out.write("METADATA|Worker|PersonNumber|FLEX:PER_PERSONS_DFF|networkId(PER_PERSONS_DFF=Global Data Elements)|PersonId|EffectiveStartDate|EffectiveEndDate");            
+                            out.newLine();
+                            break;
+                        case "email":
+                            out.write("METADATA|PersonEmail|EmailAddressId|PersonId|PersonNumber|DateFrom|DateTo|EmailType|EmailAddress|PrimaryFlag");
+                            out.newLine();
+                            break;
+                        case "phone":
+                            out.write("METADATA|PersonPhone|PhoneId|PersonId|PersonNumber|PhoneType|DateFrom|DateTo|CountryCode|AreaCode|Phone|Extension|PrimaryFlag");
+                            out.newLine();
+                            break;
+                    }                      
+                }
+            
+                // Get contents of file and save to destination file, out
+                File file = new File(sourceDir + fileName);
+                FileInputStream fis = new FileInputStream(file);
+                BufferedReader in = new BufferedReader(new InputStreamReader(fis));
+                    
+                String aLine = null;
+                while ((aLine = in.readLine()) != null) {
+                    //Process each line and add output to Dest.txt file
+                    out.write(aLine);
+                    out.newLine();
+                }
+                // do not forget to close the buffer reader
+                in.close();
+                    
+                //Delete the source file
+                file.delete();               
+            }
+        }
+    }  
+     // close buffer writer
+    out.close();
+ }
+
+return "Success";
