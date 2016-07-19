@@ -45,7 +45,7 @@ Date startDate = dateFMTMMddyyyy.parse(identityPerStartDate);
 String csvBaseDir = "\\\\cov6nas02\\slpdevxfr\\mft\\inbound\\working\\"; 
 
 logger.debug( identityName  + "(" + acctPersonID + ")" + isEmployee +" ");
-logger.debug("4");
+
 ////////////////////////////////////////
 // Find the current networkID assigned to the identity
 //
@@ -122,7 +122,7 @@ if (null != rowsEmail) {
             // Check to see if this a new email or an update?
             if ( Util.isNotNullOrEmpty(acctEmailIndex) ) 
                 // Update
-                fileWriter.println("MERGE|PersonEmail|" + acctEmailIndex + "|" + acctPersonIndex + "|" + acctPersonID + "|||" + email + "|Y");
+                fileWriter.println("MERGE|PersonEmail|" + acctEmailIndex + "|" + acctPersonIndex + "|" + acctPersonID + "||W1|" + email + "|Y");
             else
                 // New 
                 fileWriter.println("MERGE|PersonEmail|" + acctEmailIndex + "|" + acctPersonIndex + "|" + acctPersonID + "|" + dateFMTyyyyMMdd.format(startDate) + "|4712/12/31|W1|" + email + "|Y");
