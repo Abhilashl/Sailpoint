@@ -1,0 +1,247 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<!DOCTYPE Rule PUBLIC "sailpoint.dtd" "sailpoint.dtd">
+<Rule created="1459447535315" id="8a8596e4537c17b50153cdda16d3129a" language="beanshell" modified="1466688682760" name="aci_Library">
+  <Source>
+
+import org.apache.log4j.Logger;
+import sailpoint.object.*;
+import sailpoint.api.*;
+import sailpoint.tools.Util;
+import java.util.Iterator;
+import java.util.HashMap;
+import java.util.Map;
+  
+  
+/********************************************************************************
+*  doesExists
+*    Does an identity attribute already have this value
+********************************************************************************/  
+public boolean doesExists(String value, String identityName, String field) {
+
+    boolean exists = false;
+    try {
+        QueryOptions ops = new QueryOptions();
+        //change email to field
+        ops.addFilter(Filter.eq(field, value));
+        ops.addFilter(Filter.ne("name",identityName));
+        
+        Iterator rows = context.search(Identity.class, ops, Util.asList("name"));
+        while ( rows.hasNext() ) {
+            Object[] row = (Object[])rows.next();
+            String in = (String)row[0];
+            exists=true; 
+        }
+    }catch(Exception e) {
+        System.out.println.error("Error occurred in doesExists",e);
+        return exists;
+    }
+    return exists;		
+}
+  
+/********************************************************************************
+*  createNetworkId
+*    Generate a networkId from first and last name
+********************************************************************************/  
+public String createNetworkId(String firstName, String lastName) {
+    int loop = 1 ;
+    int filler = 1;
+    String networkId= lastName + firstName.charAt(0);
+    
+    // Minimum of 6 characters
+    while ( networkId.length()&lt;6 ) {
+        if ( loop &lt; firstName.length() ) {
+            networkId = networkId + firstName.charAt(loop);
+        }else {
+            networkId += filler++;
+        }
+        loop++;
+    }
+
+    networkId = networkId.replaceAll(" ","");
+    return networkId.toLowerCase();
+}  
+  
+/********************************************************************************
+*  getNewNetworkId
+*    Validate the networkId is not in use
+********************************************************************************/  
+public String getNewNetworkId(Identity identityObject) {
+    String identityFname = (String) identityObject.getFirstname();
+    String identityLname = (String) identityObject.getLastname();
+
+    // Remove all non-alpha characters and make lowercase
+    if ( Util.isNotNullOrEmpty(identityFname) ) 
+        identityFname = identityFname.replaceAll("[^a-zA-Z]", "").toLowerCase().trim();
+    if ( Util.isNotNullOrEmpty(identityLname) ) 
+        identityLname = identityLname.replaceAll("[^a-zA-Z]", "").toLowerCase().trim();
+ 
+    String networkId= "";
+
+    ////////////////////////////////////////
+    // LastName[First initial of FirstName]
+    if ( Util.isNotNullOrEmpty(identityLname) &amp;&amp; Util.isNotNullOrEmpty(identityFname) ) {
+        
+        int firstNamePosition = 1 ;     // Position in firstName string (1..x)
+        int filler = 1;                 // Number at the end of an account
+        int firstNamelength = identityFname.length();
+        int lastNamelength = identityLname.length();
+        
+        networkId = identityLname + identityFname.charAt(0);
+        
+        // Is lastname less then 5?
+        if ( networkId.length() &lt; 6 ) {
+            // Less than Six characters
+            firstNamePosition = 6 - lastNamelength;
+            
+            // Are there enough letters in firstname?
+            if ( firstNamePosition &lt; firstNamelength ) {
+                // Enough characters
+                networkId = identityLname + identityFname.substring(0, firstNamePosition - 1 ); 
+            } else {
+                // Not enough characters
+                networkId = identityLname + identityFname;
+                firstNamePosition = firstNamelength;            
+                // need to make 6 characters and unique
+            }
+        }
+        
+        // NetworkID is at least six characters
+        // Is the current networkId Unique?
+        while ( doesExists(networkId, identityObject.name, "networkId") ) {
+            // Is there any characters left in firstname
+            firstNamePosition++;
+            if ( firstNamePosition &le; firstNamelength ) {
+                // Enough characters
+                networkId = networkId + identityFname.charAt(firstNamePosition);                
+            } else {
+                // Not enough characters - Use Numbers to make unique
+                filler++;
+                networkId = networkId.replaceAll("[0-9]$", filler);
+            }
+        }
+    }
+}
+  
+/********************************************************************************
+*  writeToLog
+*
+********************************************************************************/
+String writeToLog (String file, String content) { 
+    import org.apache.jmeter.services.FileServer;
+    import java.text.DateFormat;
+    import java.text.SimpleDateFormat;
+    import org.apache.commons.io.FileUtils;
+    import java.io.File;
+    import java.io.IOException;
+ 
+    DateFormat dateFormat = new SimpleDateFormat("yyyyMMdd.HHmmss.S");
+    Date currentDate = new Date();
+
+    // Create the File handle
+    File logFile = new File(file);
+    try
+    {    
+        FileUtils.writeStringToFile(logFile, dateFormat.format(currentDate) + ":  " + content, true);
+        //fileWriter = new PrintWriter( new FileOutputStream( logFile ));
+        //fileWriter.println(dateFormat.format(currentDate) + ":  " + content);
+                    
+        // Close File handles
+        //fileWriter.flush();
+        //fileWriter.close();
+        
+        return "ok";
+    }
+    catch ( Exception e )
+    {
+        // User doesn't have permission to write  
+        return "error on fileWriter";
+    }
+}
+
+
+/********************************************************************************
+*  getNewIdentityName
+*
+********************************************************************************/
+public String getNewIdentityName( String lastName, String firstName, String middleName, String knownAs, String emailDomain) {
+
+    String emailPrefix = "";
+
+    // New Identity
+    //    Find an open CubeName
+    
+    ////////////////////////////////////////
+    //Is there a KnownAs?
+    if ( Util.isNotNullOrEmpty(knownAs) ) {
+        //Use KnownAs
+        emailPrefix = knownAs;
+    } else {
+        emailPrefix = firstName;
+    }
+
+    //Check to see if its used
+    cubeName = emailPrefix + "." + lastName + emailDomain;
+    Identity identityObject = context.getObjectByName(Identity.class, cubeName);
+    try { Objects.requireNonNull(identityObject , "identity object must not be null"); 
+        // CubeName in use
+        cubeName = null;
+    } catch(Exception e) {   
+        // Found an open CubeName
+        foundCubeName = true;
+    }
+
+    ////////////////////////////////////////
+    //Is there a Middle Name? Use Initial
+    if ( ! foundCubeName &amp;&amp; Util.isNotNullOrEmpty(middleName) ) {
+        //Use Middle Initial
+        cubeName = emailPrefix + "." + middleName.substring(0,1) + "." + lastName + emailDomain;
+
+        //Check to see if its used
+        Identity identityObject = context.getObjectByName(Identity.class, cubeName);
+        try { Objects.requireNonNull(identityObject , "identity object must not be null"); 
+            // CubeName in use
+            cubeName = null;
+        } catch(Exception e) {   
+            // Found an open CubeName
+            foundCubeName = true;
+        }         
+    }
+
+    ////////////////////////////////////////
+    //Is there a Middle Name? Use full Middle Name
+    if ( ! foundCubeName &amp;&amp; Util.isNotNullOrEmpty(middleName) ) {
+        //Use Middle Initial
+        cubeName = emailPrefix + "." + middleName + "." + lastName + emailDomain;
+        
+        //Check to see if its used
+        Identity identityObject = context.getObjectByName(Identity.class, cubeName);
+        try { Objects.requireNonNull(identityObject , "identity object must not be null"); 
+            // CubeName in use
+            cubeName = null;
+        } catch(Exception e) {   
+            // Found an open CubeName
+            foundCubeName = true;
+        }
+    }    
+     
+    ////////////////////////////////////////
+    //Increment an number until a email is found
+    int number = 2;
+    while ( ! foundCubeName ) {
+        cubeName = emailPrefix + "." + lastName + number + emailDomain;
+        number++;
+
+        //Check to see if its used
+        Identity identityObject = context.getObjectByName(Identity.class, cubeName);
+        try { Objects.requireNonNull(identityObject , "identity object must not be null"); 
+            // CubeName in use
+            cubeName = null;
+        } catch(Exception e) {   
+            // Found an open CubeName
+            foundCubeName = true;
+        }        
+    }
+    return cubeName;
+}
+</Source>
+</Rule>

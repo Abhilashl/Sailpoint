@@ -1,0 +1,117 @@
+/*   
+    Rule:    aci_FusionCorrelation
+    Author:  Steve Nuffer
+
+    Email:  prefix.[Middle].Lastname@ 
+        
+    Author:  Steve Nuffer
+	
+    Date:  July 5, 2016
+    Version:  1.3
+
+*/
+import org.apache.log4j.Logger;
+import sailpoint.object.*;
+import sailpoint.api.*;
+import sailpoint.tools.Util;
+
+Logger  logger = Logger.getLogger("com.aci.rule.aci_FusionCorrelation");
+
+Map returnMap = new HashMap();
+
+String isEmployee = account.getStringAttribute("CURRENT_EMPLOYEE_FLAG");
+String acctPersonID = account.getStringAttribute("PERSON_ID");
+String acctFname = account.getStringAttribute("FIRST_NAME");
+String acctLname = account.getStringAttribute("LAST_NAME");
+String acctKnownAs = account.getStringAttribute("KNOWN_AS");
+String acctMname = account.getStringAttribute("MIDDLE_NAMES");
+String acctUserName = account.getStringAttribute("USERNAME");
+String cubeName = null;
+String emailDomain = "@aciworldwide.com";
+boolean foundCubeName = false;
+
+// Remove all non-alpha characters and make lowercase
+if ( Util.isNotNullOrEmpty(acctFname) ) 
+    acctFname = acctFname.replaceAll("[^a-zA-Z]", "").toLowerCase().trim();
+if ( Util.isNotNullOrEmpty(acctLname) ) 
+    acctLname = acctLname.replaceAll("[^a-zA-Z]", "").toLowerCase().trim();
+if ( Util.isNotNullOrEmpty(acctKnownAs) ) 
+    acctKnownAs = acctKnownAs.replaceAll("[^a-zA-Z]", "").toLowerCase().trim();
+if ( Util.isNotNullOrEmpty(acctMname) ) 
+    acctMname = acctMname.replaceAll("[^a-zA-Z]", "").toLowerCase().trim();
+
+logger.debug("Start (" + acctPersonID + ")  EMP=" + isEmployee + " acctFname=" + acctFname + " acctLname=" + acctLname + " acctKnownAs=" + acctKnownAs + " acctMname=" + acctMname );    
+    
+// Find an existing Identity by PersonID
+// 
+QueryOptions qo = new QueryOptions();
+qo.addFilter(Filter.eq("personId", acctPersonID));
+Iterator rows = context.search(Identity.class, qo,Util.asList("name"));
+
+if (null != rows) {
+    // Found an existing identity
+    while (rows.hasNext()) {
+        String identityName = (String) rows.next()[0];
+        logger.debug("   Existing: identityName=" + identityName + "  acctUserName=" + acctUserName );
+
+        // Set to current identity
+        cubeName = identityName;
+        foundCubeName = true;   
+        
+        if ( ! identityName.equalsIgnoreCase(acctUserName) && Util.isNotNullOrEmpty(acctUserName) ) {
+            //If acctUserName is different then the identity needs to change
+            //    since email has changed
+            logger.info("Existing Identity (" + identityName + ") is different then Fusion HCM USERNAME or EMPLOYEE_EMAIL(" + acctUserName + ")");
+        }        
+    }   
+} 
+
+if ( ! foundCubeName ) {
+    logger.debug("   New Identity");
+    // New Identity
+    //    Find an open CubeName
+    cubeName = getNewIdentityName( acctLname, acctFname, acctMname, acctKnownAs, emailDomain );
+}
+
+//  Uncomment when only one authoritative source
+/*
+if ( isEmployee.equalsIgnoreCase("y")  ) {
+    // Active
+    account.setAttribute("IIQDisabled", "false");
+} else {
+    // In-Active
+    account.setAttribute("IIQDisabled", "true");
+}
+*/
+
+// Setup the cube
+account.setAttribute("USERNAME", cubeName.toLowerCase());
+account.setDisplayName(cubeName.toLowerCase());
+returnMap.put("name", (cubeName.trim()).toLowerCase());    
+sailpoint.tools.Util.flushIterator(rows);     
+logger.debug("   END cubeName=" + cubeName);
+
+/*
+// Find the current Source and set employment status
+QueryOptions qo = new QueryOptions();
+Filter qoFilter = Filter.eq("application.name", "PRD HRMS");
+qoFilter = Filter.and(qoFilter, Filter.eq("identity.name", cubeName.toLowerCase()));
+qo.addFilter(qoFilter);
+
+Iterator rows = context.search(Link.class, qo);
+while (rows.hasNext()) {  
+        Link link = (Link) rows.next();  
+        
+        isHRMSDisabled = link.isDisabled();
+
+    // Is the legacy Oracle HRMS field CURRENT_EMPLOYEE_FLAG?
+    // Set based upon the Oracle HRMS application
+
+    logger.debug("    HRMS Enabled:" + ! isHRMSDisabled + "  Fusion Enabled:" + isEmployee);
+    account.setAttribute("IIQDisabled", isHRMSDisabled);
+    returnMap.put("IIQDisabled", isHRMSDisabled); 
+}
+sailpoint.tools.Util.flushIterator(rows);
+*/
+
+return(returnMap);
