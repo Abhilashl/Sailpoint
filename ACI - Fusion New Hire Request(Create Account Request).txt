@@ -1,0 +1,339 @@
+    Workflow:  ACI - Fusion New Hire
+    Step:  Create Account Request
+    
+    Date:  June 9, 2016
+    Version:  1.0
+*/
+import sailpoint.object.*;
+import sailpoint.api.*;
+import sailpoint.aci.util.ACIUtil;
+import sailpoint.tools.Util;
+import java.util.*;
+import java.text.*;
+import org.apache.log4j.Logger;
+
+Logger logger = Logger.getLogger("com.aci.wf.joiner");
+Logger logActivity = Logger.getLogger("com.aci.wf.fusion_new_hire");
+
+logger.debug("ACI - Fusion New Hire Request(Create Account Request)");
+
+DateFormat dateFormatter = new SimpleDateFormat("MM/dd/yyyy HH:mm:ss");
+now = new Date();
+
+ProvisioningPlan plan = new ProvisioningPlan();
+
+// Identity Attributes
+Identity identityObj = context.getObjectByName(Identity.class, identityName);
+String identityPersonID = identityObj.getAttribute("personId");
+String identityFname = identityObj.getFirstname();
+String identityLname = identityObj.getLastname();
+String identityMname = identityObj.getAttribute("MIDDLE_NAMES");
+String identityKnownAs = identityObj.getAttribute("KNOWN_AS");
+String identityDivision = identityObj.getAttribute("division");
+String identityTitle = identityObj.getAttribute("employeeTitle");
+String identityPerType = identityObj.getAttribute("personType");
+String identityDept = identityObj.getAttribute("DEPT_NAME");
+String identityLoc = identityObj.getAttribute("location");
+String identityCountry = identityObj.getAttribute("country");
+String identityStartDate = identityObj.getAttribute("EMP_START_DATE");
+String identityEndDate = identityObj.getAttribute("enterpriseEndDate");
+
+//  Application attributes
+String identityAddress = "None";
+String identityCity = "None";
+String identityRegion = "None";
+String identityPostalCode = "None";
+
+// Get the AD OU from countryCodeMap
+Custom custom = context.getObjectByName(Custom.class,"countryCodeMap");
+String ou = custom.get(identityCountry);
+
+//Check if Null or empty
+if ( !Util.isNotNullOrEmpty(identityFname) ) identityFname = "";
+if ( !Util.isNotNullOrEmpty(identityLname) ) identityLname = "";
+if ( !Util.isNotNullOrEmpty(identityMname) ) identityMname = "";
+if ( !Util.isNotNullOrEmpty(identityKnownAs) ) identityKnownAs = "";
+if ( !Util.isNotNullOrEmpty(identityDivision) ) identityDivision = "";
+if ( !Util.isNotNullOrEmpty(identityTitle) ) identityTitle = "";
+if ( !Util.isNotNullOrEmpty(identityPerType) ) identityPerType = "";
+if ( !Util.isNotNullOrEmpty(identityDept) ) identityDept = "";
+if ( !Util.isNotNullOrEmpty(identityLoc) ) identityLoc = "";
+if ( !Util.isNotNullOrEmpty(identityCountry) ) identityCountry = "";
+if ( !Util.isNotNullOrEmpty(identityEndDate ) ) identityEndDate = "";
+if ( !Util.isNotNullOrEmpty(ou) ) ou = "";
+
+
+logger.debug("\t[" + identityLname + ", " + identityFname + "(" + identityKnownAs + ")] {" + identityPersonID + "}");
+logger.debug("\t   Division:" + identityDivision + " Title:" + identityTitle + " PersonType:" + identityPerType);
+logger.debug("\t   Department:" + identityDept + " Location:" + identityLoc + " Country:" + identityCountry);
+logger.debug("\t   StartDate:" + identityStartDate + " ou:" + ou);
+
+//  Setup Notification Manager Email
+logger.debug("Manager Notification"); 
+
+Identity managerObj = identityObj.getManager();
+if (null != managerObj) {
+    managerApprover = managerObj.getName();
+    workflow.put("managerEmail", managerObj.getEmail());
+    workflow.put("managerName", managerObj.getDisplayableName());
+} else {
+    Identity idAdmin = context.getObjectByName(Identity.class, "spadmin");
+    managerApprover = "spadmin";
+    workflow.put("managerName", managerApprover);
+    if (null != idAdmin.getEmail()){
+        workflow.put("managerEmail", idAdmin.getEmail());
+    }
+}
+
+// Setup Notification to HR        
+if ( ou.equals("EMEA") ) {
+    logger.debug("\tHR Notification - mbox-emea");
+    workflow.put("hrEmail", "mbox-emea-orientation@aciworldwide.com");
+}else if ( ou.equals("AP") ) {
+    logger.debug("\tHR Notification - mbox-ap");
+    workflow.put("hrEmail","mbox-ap-ecn-hr@aciworldwide.com");
+}else {
+    logger.debug("\tHR Notification - mbox-am");
+    workflow.put("hrEmail", "mbox-am-orientation@aciworldwide.com");
+}
+
+workflow.put("employeeOU", ou);
+logger.debug("\tidentityPerType=" + identityPerType);
+
+// Create accounts if PersonType is below
+switch ( identityPerType.toLowerCase() ) {
+    case "employee":
+    case "contingent worker":
+
+    /***********Create AD account ***********************
+    *****************************************************/
+    acctReq.setOperation(AccountRequest.Operation.Create);
+    acctReq.setApplication(appPrimaryAD);
+       
+    sAMAccountName = "Dev"+newNetworkId;
+    logger.debug("\tsAMAccountName: "+sAMAccountName);
+
+    acctReq.add(new AttributeRequest("sAMAccountName",ProvisioningPlan.Operation.Add, sAMAccountName));  
+    //acctReq.add(new AttributeRequest("ObjectType",ProvisioningPlan.Operation.Add,"User"));  
+    //acctReq.add(new AttributeRequest("*password*",ProvisioningPlan.Operation.Add,"newP@$$word"));  
+    acctReq.add(new AttributeRequest("department", ProvisioningPlan.Operation.Add,identityObj.getAttribute("DEPT_NAME")));
+    logger.debug("Set AD department to "+identityObj.getAttribute("DEPT_NAME"));
+
+        if ( ! identityKnownAs.equalsIgnoreCase("none") ) {
+            logger.debug("Using identityKnownAs: " + identityKnownAs);
+            acctReq.add(new AttributeRequest("displayName",ProvisioningPlan.Operation.Add, identityLname +", "+ identityKnownAs ));
+        } else {
+            acctReq.add(new AttributeRequest("displayName",ProvisioningPlan.Operation.Add, identityLname +", "+ identityFname ));
+        }
+        
+        acctReq.add(new AttributeRequest("givenName",ProvisioningPlan.Operation.Add,identityFname ));
+        acctReq.add(new AttributeRequest("sn",ProvisioningPlan.Operation.Add,identityLname));
+        acctReq.add(new AttributeRequest("mail",ProvisioningPlan.Operation.Add,identityObj.email));
+        acctReq.add(new AttributeRequest("description",ProvisioningPlan.Operation.Add,"IIQ Joiner:  "+ dateFormatter.format(now)));
+        
+        // Add birthright groups
+        //
+        acctReq.add(new AttributeRequest("IIQDisabled",false));
+        //acctReq.setNativeIdentity( "CN="+identityName+",OU="+ou+",OU=UserAccounts,OU=Dev,DC=tst,DC=aciww,DC=com" );
+        //acctReq.setNativeIdentity( "CN="+identityObj.getLastname()+"\\, "+identityObj.getFirstname()+",OU="+ou+",OU=UserAccounts,OU=Dev,DC=tst,DC=aciww,DC=com" );
+        adNID = "CN="+identityObj.getLastname()+"\\, "+identityObj.getFirstname()+",OU=UserAccounts,OU=Dev,DC=tst,DC=aciww,DC=com";
+        acctReq.setNativeIdentity( adNID );
+        String dn = adNID;
+           int dcindex=dn.indexOf("DC=");
+           String domain = dn.substring(dcindex+3, dn.indexOf(",", dcindex) );
+           logger.debug("Domain: "+domain);
+        workflow.put("domain", domain);	
+           acctReq.add(new AttributeRequest("employeeId",ProvisioningPlan.Operation.Add,identityPersonID));
+        //acctReq.add(new AttributeRequest("employeeNumber",ProvisioningPlan.Operation.Add,employeeNum));
+        acctReq.add(new AttributeRequest("division",ProvisioningPlan.Operation.Add,identityDivision));
+        acctReq.add(new AttributeRequest("extensionAttribute10", ProvisioningPlan.Operation.Add,"Personal"));
+        acctReq.add(new AttributeRequest("extensionAttribute11", ProvisioningPlan.Operation.Add,"Active"));
+        acctReq.add(new AttributeRequest("mail",ProvisioningPlan.Operation.Add,identityObj.email));
+     
+        acctReq.add(new AttributeRequest("title",ProvisioningPlan.Operation.Add,identityObj.getAttribute("employeeTitle"))); 
+        acctReq.add(new AttributeRequest("physicalDeliveryOfficeName",ProvisioningPlan.Operation.Add,identityObj.getAttribute("location")));
+        acctReq.add(new AttributeRequest("userPrincipalName",ProvisioningPlan.Operation.Add,identityObj.email));
+        acctReq.add(new AttributeRequest("company",ProvisioningPlan.Operation.Add,"ACI Worldwide"));
+        acctReq.add(new AttributeRequest("pwdLastSet",ProvisioningPlan.Operation.Add,"true"));
+        String teleph =  identityObj.getAttribute("WORK_TELEPHONE");
+           if ( !Util.isEmpty(teleph) ) {
+              acctReq.add(new AttributeRequest("telephoneNumber",ProvisioningPlan.Operation.Add,teleph));
+          }
+            
+        //Add groups
+        List ADGroups = new ArrayList();
+        //ADGroups.add("CN=Domain ACSUsers,OU=Groups,OU=Omaha,OU=OU Central,OU=Dev,DC=tst,DC=aciww,DC=com");
+        ADGroups.add("CN=Domain Users,CN=Users,DC=tst,DC=aciww,DC=com");
+            acctReq.add(new AttributeRequest("memberOf",ProvisioningPlan.Operation.Add,ADGroups));
+            logger.debug("Done setting AD groups");
+    }
+
+        //Set AD managerObj
+    if ( managerObj != null ) {
+           String mgrdn = "";
+
+        List mlinks = managerObj.getLinks();
+        for ( int k=0; k&lt;mlinks.size(); k++ ) {
+            Link ml = mlinks.get(k);
+            
+            String mApp = ml.getApplication().getName();
+            if ( mApp.contains("tst.aciww.com") ) {
+                logger.debug("manager: "+ml.getNativeIdentity());
+                mgrdn = ml.getNativeIdentity();
+                if ( !Util.isEmpty(mgrdn) &amp;&amp; mApp.equalsIgnoreCase(appPrimaryAD)) {
+                   break;
+                }
+            }
+        }
+    /*    
+        IdentityService is = new IdentityService(context);
+
+        Application res = context.getObjectByName(Application.class, appPrimaryAD);
+        List appLinks = is.getLinks(manager, res);
+        String mgrdn = "";
+        if (appLinks!=null) {
+            if ( appLinks.size()>0 ) {
+                Link lk = appLinks.get(0);
+                mgrdn=lk.getNativeIdentity();
+            }
+        }
+    */	
+    logger.debug("AD manager: "+ mgrdn);
+    if ( !Util.isEmpty(mgrdn) )
+    acctReq.add(new AttributeRequest("manager",ProvisioningPlan.Operation.Add,mgrdn));
+    }
+    //
+
+    //Generate password
+    String policyName="AD Password Policy";
+    PasswordPolicy policy = context.getObjectByName(PasswordPolicy.class, policyName);
+
+    String adpassword = new PasswordGenerator(context).generatePassword(policy);
+    acctReq.add(new AttributeRequest("password",ProvisioningPlan.Operation.Add,adpassword));
+
+    plan.add(acctReq);
+    workflow.put("networkId", sAMAccountName);
+    workflow.put("adpassword", adpassword);
+    workflow.put("firstname", identityFname);
+    workflow.put("lastname", identityLname);
+    workflow.put("middlename", identityMname);
+    workflow.put("employeeEmail", identityObj.email);
+    workflow.put("knownas", identityKnownAs);
+    workflow.put("employeeTitle", identityTitle);
+    workflow.put("personType", identityPerType);
+    workflow.put("division", identityDivision);
+    workflow.put("department", identityDept);
+    workflow.put("location", identityLoc);
+    workflow.put("country", identityCountry);
+    workflow.put("startDate", identityStartDate);
+    workflow.put("endDate", identityEndDate );
+    workflow.put("address", identityAddress);
+    workflow.put("city", identityCity);
+    workflow.put("region", identityRegion);
+    workflow.put("postalCode", identityPostalCode);
+
+    logger.debug("....Done creating AD account request........");
+    /***********************************
+    *******SF Account provisioning******
+    ***********************************/
+    AccountRequest sfReq = new AccountRequest();
+    
+    String email = newEmail;
+
+    if ( isSFAccountExists ) {
+        sfReq.setOperation(AccountRequest.Operation.Enable);
+        sfReq.setApplication(appSForce);
+        sfReq.setNativeIdentity(sfuser);
+    } else {
+        sfReq.setOperation(AccountRequest.Operation.Create);
+        sfReq.setApplication(appSForce);
+
+        //String email = newEmail;
+        sfuser = identityObj.email+"test.full";
+        sfReq.setNativeIdentity(sfuser);
+        
+        sfReq.add(new AttributeRequest("email",ProvisioningPlan.Operation.Add,email));
+            //sfReq.add(new AttributeRequest("Username",ProvisioningPlan.Operation.Add,email));
+        String ln = identityObj.getLastname();
+        ln = ln.substring(0, ln.length()>8?8:ln.length()); //alias is required and has to be less than 8
+        sfReq.add(new AttributeRequest("Alias",ProvisioningPlan.Operation.Add,ln));
+            //sfReq.add(new AttributeRequest("Name",ProvisioningPlan.Operation.Add, identityObj.getFirstname()+" "+identityObj.getLastname()));
+        sfReq.add(new AttributeRequest("FirstName",ProvisioningPlan.Operation.Add,identityObj.getFirstname()));
+        sfReq.add(new AttributeRequest("LastName",ProvisioningPlan.Operation.Add,identityObj.getLastname()));
+            //sfReq.add(new AttributeRequest("ProfileName",ProvisioningPlan.Operation.Add,"ACI: ServiceDesk Staff Platform"));
+        sfReq.add(new AttributeRequest("ProfileName",ProvisioningPlan.Operation.Add,"ACI: ServiceDesk Client Platform"));
+        sfReq.add(new AttributeRequest("UserRoleName",ProvisioningPlan.Operation.Add,"Global Access"));
+        sfReq.add(new AttributeRequest("ReceivesAdminInfoEmails",ProvisioningPlan.Operation.Add,"false"));
+        sfReq.add(new AttributeRequest("ReceivesInfoEmails",ProvisioningPlan.Operation.Add,"false"));
+        sfReq.add(new AttributeRequest("UserPermissionsMarketingUser",ProvisioningPlan.Operation.Add,"false"));
+        sfReq.add(new AttributeRequest("UserPermissionsMobileUser",ProvisioningPlan.Operation.Add,"false"));
+        sfReq.add(new AttributeRequest("UserPermissionsOfflineUser",ProvisioningPlan.Operation.Add,"false"));
+        sfReq.add(new AttributeRequest("UserPermissionsSFContentUser",ProvisioningPlan.Operation.Add,"false"));
+            //sfReq.add(new AttributeRequest("UserType",ProvisioningPlan.Operation.Add,"Standard"));
+        sfReq.add(new AttributeRequest("TimeZoneSidKey",ProvisioningPlan.Operation.Add,"America/Chicago"));
+        sfReq.add(new AttributeRequest("LocaleSidKey",ProvisioningPlan.Operation.Add,"en_US"));
+        sfReq.add(new AttributeRequest("EmailEncodingKey",ProvisioningPlan.Operation.Add,"UTF-8"));
+        sfReq.add(new AttributeRequest("LanguageLocaleKey",ProvisioningPlan.Operation.Add,"en_US"));
+        sfReq.add(new AttributeRequest("Person_ID__c",ProvisioningPlan.Operation.Add,identityPersonID));
+
+        //
+        sfReq.add(new AttributeRequest("Department",ProvisioningPlan.Operation.Add,identityObj.getAttribute("DEPT_NAME")));
+        sfReq.add(new AttributeRequest("Title",ProvisioningPlan.Operation.Add,identityObj.getAttribute("employeeTitle")));
+        sfReq.add(new AttributeRequest("FederationIdentifier",ProvisioningPlan.Operation.Add, identityObj.email));
+
+        if ( managerObj != null ) {
+            logger.debug("SF manager email: "+managerObj.getEmail()+".full");
+            sfReq.add(new AttributeRequest("Manager_Email__c",ProvisioningPlan.Operation.Add, managerObj.getEmail()+".full"));
+        }
+        sfReq.add(new AttributeRequest("Rank__c",ProvisioningPlan.Operation.Add,identityObj.getAttribute("rank")));
+    }
+    plan.add(sfReq);
+
+    logger.debug("....Done creating SF account request........");
+
+    /***End SF account creation***/
+
+    /***********************************
+    *******Clarity Account provisioning******
+    **********************************/
+/*
+    AccountRequest clReq = new AccountRequest();
+
+    if ( isClarityAccountExists ) {
+        clReq.setOperation(AccountRequest.Operation.Enable);
+        clReq.setApplication(appClarity);
+        clReq.setNativeIdentity(email);
+    } else {
+
+        clReq.setOperation(AccountRequest.Operation.Create);
+        clReq.setApplication(appClarity);
+
+        //String email = "testing@aciworldwide.com";
+        clReq.setNativeIdentity(email);
+        clReq.add(new AttributeRequest("email",ProvisioningPlan.Operation.Add,email));
+        clReq.add(new AttributeRequest("Username",ProvisioningPlan.Operation.Add,email));
+
+        clReq.add(new AttributeRequest("FirstName",ProvisioningPlan.Operation.Add,identityObj.firstname));
+        clReq.add(new AttributeRequest("LastName",ProvisioningPlan.Operation.Add,identityObj.lastname));
+        clReq.add(new AttributeRequest("PersonId",ProvisioningPlan.Operation.Add,identityPersonID));
+    }
+    plan.add(clReq);
+    logger.debug("....Done creating Clarity account request........");
+*/
+    /***End Clarity account creation***/
+
+    plan.setIdentity(identityObj);
+
+    workflow.put("sfusername", sfuser);
+    //workflow.put("clusername", email);
+
+    logger.debug("Plan = " + plan.toXml());
+
+        break;
+    // All other PersonTypes
+    default:
+        logger.debug("Plan not created because PERSON_TYPE=" + identityPerType );
+        break;
+}
+
+return plan;
