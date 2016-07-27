@@ -1,42 +1,92 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <!DOCTYPE EmailTemplate PUBLIC "sailpoint.dtd" "sailpoint.dtd">
 <EmailTemplate created="1460054152484" id="8a8d9c9653dc8ac90153f20255240006" modified="1460488024467" name="ACI - RemedyForce Joiner Email">
-  <Body>
+    <Body>
   &lt;html>
 &lt;h2>$personType starting on $startDate&lt;/h2>
 &lt;pre>
 &lt;h3>-----  $personType Information  -----&lt;/h3>
      Last Name:      $lastname
      First Name:     $firstname
-     Preferred Name: $knownas 
-     Middle Name:    $middlename 
 
      Start Date:  $startDate
-#if ( $personType == "Contingent Worker"  ) 
+#if ( $personType == "Contingent Worker" ) 
      End Date:    $endDate
 #end
      
+#if ($employeeTitle) 
      Title:       $employeeTitle
+#else
+     Title:       None
+#end
+#if ($personType) 
      Person Type: $personType
+#else
+     Person Type: None
+#end    
+#if ($company) 
+     Company:     $company
+#else
+     Company:     None
+#end        
+#if ($division) 
      Division:    $division
+#else
+     Division:    None
+#end    
+#if ($department) 
      Department:  $department
+#else
+     Department:  None
+#end
 
+
+#if ($department) 
      Country:     $country
+#else
+     Country:     None
+#end
+#if ($location) 
      Location:    $location
+#else
+     Location:    None
+#end
+#if ($address) 
      Address:     $address
+#else
+     Address:     None
+#end
+#if ($city) 
      City:        $city
+#else
+     City:        None
+#end    
+#if ($city) 
      Region:      $region
-     Postal code: $postalCode    
-
+#else
+     Region:      None
+#end
+#if ($postalCode) 
+     Postal code: $postalCode
+#else
+     Postal code: None
+#end
+    
+    
+#if ($managerName) 
      Manager:        $managerName
      Manager Email:  $managerEmail
-
+#else
+     Manager:        None
+     Manager Email:  None
+#end
+    
           
 &lt;h3>-----  Account Information  -----&lt;/h3>
      Network ID:  $networkId
      Email:       $employeeEmail
-
-
+&lt;br>
+&lt;br>
 &lt;B>Statement of Confidentiality: &lt;/B>
 This e-mail message and any attachments may contain confidential, proprietary or on-public information. This information is intended solely for the designated recipient(s). If an addressing or transmission error has misdirected this e-mail, please notify the sender immediately and destroy this e-mail. Any review, dissemination, use or reliance upon this information by unintended recipients is prohibited.     
 &lt;/pre>     
@@ -62,10 +112,6 @@ This e-mail message and any attachments may contain confidential, proprietary or
     </Inputs>
   </Signature>
   <Subject>
-#if ( $knownas != "None" ) 
-     New Hire - $lastname, $knownas $startDate
-#else
      New Hire - $lastname, $firstname $startDate
-#end
   </Subject>
 </EmailTemplate>
