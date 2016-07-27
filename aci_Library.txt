@@ -1,8 +1,3 @@
-<?xml version='1.0' encoding='UTF-8'?>
-<!DOCTYPE Rule PUBLIC "sailpoint.dtd" "sailpoint.dtd">
-<Rule created="1459447535315" id="8a8596e4537c17b50153cdda16d3129a" language="beanshell" modified="1466688682760" name="aci_Library">
-  <Source>
-
 import org.apache.log4j.Logger;
 import sailpoint.object.*;
 import sailpoint.api.*;
@@ -62,22 +57,26 @@ public String createNetworkId(String firstName, String lastName) {
 }  
   
 /********************************************************************************
-*  getNewNetworkId
+*  getNewNetworkId 
 *    Validate the networkId is not in use
 ********************************************************************************/  
+
 public String getNewNetworkId(Identity identityObject) {
+	//public String getNewNetworkId(String identityFname, String identityLname, String email ) {
     String identityFname = (String) identityObject.getFirstname();
-    String identityLname = (String) identityObject.getLastname();
+		String identityLname = (String) identityObject.getLastname();
+  
+  	//Logger logger = Logger.getLogger("com.aci.rule.getNewNetworkId");
 
     // Remove all non-alpha characters and make lowercase
     if ( Util.isNotNullOrEmpty(identityFname) ) 
-        identityFname = identityFname.replaceAll("[^a-zA-Z]", "").toLowerCase().trim();
+        identityFname = identityFname.replaceAll("[^a-zA-Z]", "").trim();
     if ( Util.isNotNullOrEmpty(identityLname) ) 
-        identityLname = identityLname.replaceAll("[^a-zA-Z]", "").toLowerCase().trim();
+        identityLname = identityLname.replaceAll("[^a-zA-Z]", "").trim();
  
     String networkId= "";
-
-    ////////////////////////////////////////
+    System.out.println("============ " + identityLname + ", " + identityFname + " =============");
+  
     // LastName[First initial of FirstName]
     if ( Util.isNotNullOrEmpty(identityLname) &amp;&amp; Util.isNotNullOrEmpty(identityFname) ) {
         
@@ -89,37 +88,48 @@ public String getNewNetworkId(Identity identityObject) {
         networkId = identityLname + identityFname.charAt(0);
         
         // Is lastname less then 5?
-        if ( networkId.length() &lt; 6 ) {
+      if ( networkId.length() &lt; 6 ) {
+            System.out.println("     1");
             // Less than Six characters
             firstNamePosition = 6 - lastNamelength;
             
             // Are there enough letters in firstname?
-            if ( firstNamePosition &lt; firstNamelength ) {
+            if ( firstNamePosition &lt;= firstNamelength ) {
                 // Enough characters
-                networkId = identityLname + identityFname.substring(0, firstNamePosition - 1 ); 
+              	System.out.println("     1.1 Enough Chracters");
+                networkId = identityLname + identityFname.substring(0, firstNamePosition ); 
             } else {
                 // Not enough characters
+                System.out.println("     1.2. Not Enough Chracters");
                 networkId = identityLname + identityFname;
                 firstNamePosition = firstNamelength;            
                 // need to make 6 characters and unique
             }
         }
+       System.out.println("     networkId=" + networkId);
         
         // NetworkID is at least six characters
         // Is the current networkId Unique?
-        while ( doesExists(networkId, identityObject.name, "networkId") ) {
+        while ( doesExists(networkId, identityObject.name, "networkId") || networkId.length() &lt; 6 ) {
+        //while ( doesExists(networkId, email, "networkId") || networkId.length() &lt; 6 ) {
+          	System.out.println("     2");
             // Is there any characters left in firstname
-            firstNamePosition++;
-            if ( firstNamePosition &le; firstNamelength ) {
+            
+            if ( firstNamePosition &lt; firstNamelength ) {
                 // Enough characters
-                networkId = networkId + identityFname.charAt(firstNamePosition);                
+                System.out.println("     2.1 Enough Chracters");
+              firstNamePosition++;
+              networkId = networkId + identityFname.charAt(firstNamePosition - 1);
             } else {
                 // Not enough characters - Use Numbers to make unique
+              	System.out.println("     2.2. Not Enough Chracters");
                 filler++;
-                networkId = networkId.replaceAll("[0-9]$", filler);
+                networkId = networkId.replaceAll("[0-9]", "") + filler;
             }
         }
     }
+    
+	return networkId.toLowerCase();
 }
   
 /********************************************************************************
@@ -243,5 +253,3 @@ public String getNewIdentityName( String lastName, String firstName, String midd
     }
     return cubeName;
 }
-</Source>
-</Rule>

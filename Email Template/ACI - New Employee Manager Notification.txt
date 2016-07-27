@@ -11,7 +11,7 @@ table, th, td {
 &lt;/style>
 &lt;/head>
 &lt;body>
-&lt;h1 style="text-align:center">&lt;img src="https://identityuat.am.tsacorp.com/identityiq/images/ACI/01.png">&lt;/h1>
+&lt;h1 style="text-align:center">&lt;img src="https://identitydev.am.tsacorp.com/identityiq/images/ACI/01.png">&lt;/h1>
 &lt;h2 style="text-align:center">&lt;b>ACI Onboarding Notification 1 of 2&lt;/b>&lt;/h2>
 &lt;p style="text-align:center">&lt;b>Employee Information&lt;/b>&lt;/p>
 &lt;table align="center">
@@ -60,11 +60,13 @@ table, th, td {
     &lt;td>$employeeOU\\$networkId &lt;/td>
 	&lt;td>Network ID &lt;/td>	
   &lt;/tr>
+#if ($!sfusername )
 &lt;tr>
     &lt;td>Salesforce&lt;/td>
     &lt;td>$sfusername &lt;/td>
 	&lt;td>Single Sign On (SSO) &lt;/td>	
   &lt;/tr>
+#end
 #if ($!clusername )
   &lt;tr>
     &lt;td>Clarity&lt;/td>
@@ -72,6 +74,13 @@ table, th, td {
 	&lt;td>Single Sign On (SSO) &lt;/td>	
   &lt;/tr>
 #end
+#if ($!webexUser )
+  &lt;tr>
+    &lt;td>Webex&lt;/td>
+    &lt;td>$!webexUser &lt;/td>
+	&lt;td>Single Sign On (SSO) &lt;/td>	
+  &lt;/tr>
+#end    
 &lt;/table>
 &lt;p style="text-align:center">To request additional accounts or privileges, visit ACI's Peer 2 Peer page and select Global Service Desk.&lt;/p>
 &lt;p style="text-align:center">Please contact the Global Service Desk at &lt;a href="tel:+1 (855) 224-3375">+1 (855) ACI-DESK&lt;/a> in the US &amp; Canada or &lt;a href="tel:+1 (404) 923-6600">+1 (404) 923-6600&lt;/a> for international locations if you have any questions or concerns.&lt;/p>

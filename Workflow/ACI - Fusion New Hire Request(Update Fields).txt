@@ -1,0 +1,51 @@
+/*
+    Workflow:  ACI - Fusion New Hire Request
+    Step:  Update Fields
+
+    Date:  July 20, 2016
+    Version:  1.1
+    
+ */
+import org.apache.log4j.Logger;
+import sailpoint.object.*;
+//import java.sql.Connection;  
+//import java.sql.DriverManager;  
+//import java.sql.PreparedStatement;  
+//import java.sql.ResultSet;  
+//import java.sql.SQLException;  
+//import java.sql.Statement;  
+
+Logger  logger = Logger.getLogger("com.aci.wf.joiner");
+
+logger.debug("ACI - Fusion New Hire Request(Update Fields)");
+logger.debug("    identity="+identityName);
+
+Identity identityObject = context.getObjectByName(Identity.class, identityName);
+
+String personId = identityObject.getAttribute("personId");
+String firstname = identityObject.getAttribute("firstname");
+String lastname = identityObject.getAttribute("lastname");
+String middlename = identityObject.getAttribute("MIDDLE_NAME");
+String email = identityObject.getAttribute("email");
+
+logger.debug("    Firstname=" + firstname + " Lastname=" + lastname );
+
+// If the name fields are empy then abort
+if ( Util.isEmpty(firstname) || Util.isEmpty(lastname) ) {
+   return false;
+}
+
+String newEmail = identityObject.getName();
+String newNetworkId = getNewNetworkId(identityObject);
+
+identityObject.setAttribute("networkId", newNetworkId);
+identityObject.setAttribute("email", newEmail);
+
+logger.debug("    Email=" + newEmail + " NetworkId=" + newNetworkId);
+
+context.saveObject(identityObject);
+
+workflow.put("newNetworkId", newNetworkId);
+workflow.put("newEmail", newEmail);
+
+return true;
