@@ -1,0 +1,121 @@
+/*
+    Workflow:  ACI - Fusion Joiner
+    Step:  CheckForErrors
+    
+    Date:  July 20, 2016
+    Version:  1.1
+*/
+import sailpoint.object.ProvisioningProject;
+import sailpoint.object.ProvisioningPlan;
+import sailpoint.object.ProvisioningResult;
+import sailpoint.tools.xml.XMLObjectFactory;
+import java.util.List;
+import java.util.ArrayList;
+import sailpoint.object.Identity;
+import sailpoint.object.Link;
+import org.apache.log4j.Logger;
+import java.text.*;
+
+//private static Log customLogger= LogFactory.getLog("com.aci.wf.joiner"); 
+Logger logger = Logger.getLogger("com.aci.wf.joiner");
+logger.debug("ACI - Fusion New Hire Request(CheckForErrors)");
+  
+List prvPlans = project.getPlans();
+
+//list of application on which provisioning failed
+List failedApps = new ArrayList();
+
+//list of application on which provisioning was successful
+List successApps = new ArrayList();
+
+boolean  failedStatus =  false;
+if(prvPlans!=null){
+//checking if the provisioning status is completed or failed.
+//Checking the result status first at provisioning plan level then at account request level and finally at attribute request level to make sure that there is no error lost.
+for (ProvisioningPlan pl: prvPlans) {
+	if(pl.getAccountRequest("IIQ")==null){
+		if(pl.getApplicationNames()!=null){
+			ProvisioningResult result = null;
+			if(pl.getAccountRequests()!=null){
+			
+				if(pl.getAccountRequests().get(0).getResult()!=null){
+					result = pl.getAccountRequests().get(0).getResult();
+				}
+			}
+			
+			if(pl.getResult()!=null){
+				result = pl.getResult();
+			}
+
+			if(result!=null){
+				if((result.getStatus()!=null) && !(result.getStatus().equalsIgnoreCase("committed"))){
+					String appError = pl.getApplicationNames().toString();
+					if(result.getErrors()!=null){
+						appError = appError + " Error : " + result.getErrors().toString();
+					}
+					              
+					failedApps.add(appError);
+					failedStatus =true;
+				}
+				else{	
+					boolean noerrrorfound = true;
+					List attreqlist = pl.getAccountRequests().get(0).getAttributeRequests();
+					if(attreqlist!=null){
+						 for(AttributeRequest attreq :attreqlist){
+							 if(attreq.getResult()!=null){
+								 attrresult= attreq.getResult().getStatus();
+								 if(!(attrresult.equalsIgnoreCase("committed"))){
+									String attrError = pl.getApplicationNames().toString();
+									if(attreq.getResult().getErrors()!=null){
+										attrError = attrError + " Error : " + attreq.getResult().getErrors().toString();
+									}
+									failedApps.add(attrError);
+									failedStatus =true;
+									logger.debug("Error --"+appError);
+									noerrrorfound=false;
+								 }
+							}
+						}
+					}
+					if(pl.getResult()!=null){
+						if(pl.getResult().getErrors()!=null){
+							String prvError= pl.getApplicationNames().toString();
+							prvError = prvError + " Error : " + pl.getResult().getErrors().toString();
+							failedApps.add(prvError);
+							failedStatus =true;
+							noerrrorfound=false;
+						}
+					} 
+					if(noerrrorfound){
+						successApps.add(pl.getApplicationNames().get(0));
+					}
+				}
+			}
+		}
+	}
+}
+}
+SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMddHHmmss");
+Calendar cur_time = Calendar.getInstance();
+cur_time.setTime(new Date());
+String output = sdf.format(cur_time.getTime());
+context.startTransaction();  
+
+if(failedStatus){
+	logger.debug("+++++++++++++  -  Error: Failed to Provision with error :"+ prvError + "     +++++++++++++++++++++");
+
+}
+
+//return failedStatus;
+String sfApp = "TST Salesforce";
+if ( !successApps.contains(sfApp) ) {
+workflow.put("sfusername","");
+}
+//Check if AD failed 
+String srcApp = "DEV Active Directory tst.aciww.com";
+if ( successApps.contains(srcApp) ) {
+	return false;
+}else {
+	return true;
+}	
+	
