@@ -1,0 +1,164 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<!DOCTYPE Workflow PUBLIC "sailpoint.dtd" "sailpoint.dtd">
+<Workflow created="1468945553163" explicitTransitions="true" id="8a8596e455ee952a015603fa570b04b3" modified="1468949407455" name="ACI - Immediate Termination" type="">
+  <Variable initializer="string:true" name="transient">
+    <Description>Set to false to cause workflow-related objects, such as approval
+    work items, to be saved in the database even if they are only
+    viewed by the person registering.</Description>
+  </Variable>
+  <Variable initializer="string:TerminateUser" name="flow">
+    <Description>The name of the LCM flow that launched this workflow.</Description>
+  </Variable>
+  <Variable initializer="string:false" name="trace">
+    <Description>Used for debugging this workflow and when set to true trace
+      will be sent to stdout.</Description>
+  </Variable>
+  <Variable initializer="script:return new ArrayList();" input="true" name="identityNames">
+    <Description>The names of the identities we&amp;#39;re terminating.</Description>
+  </Variable>
+  <Variable input="true" name="requester"/>
+  <Variable initializer="script:return 0;" name="incrementor"/>
+  <Variable name="terminationDate"/>
+  <Step icon="Start" name="Start" posX="9" posY="25">
+    <Transition to="Create User List"/>
+  </Step>
+  <Step icon="Default" name="Create User List" posX="109" posY="25">
+    <Script>
+      <Source>
+import org.apache.log4j.Logger;
+
+Logger  logger = Logger.getLogger("com.aci.wf.term");
+logger.debug("----");
+
+for(int x=0;x&lt; quickLinkIdentityIds.size();x++) {
+  Identity aUser = context.getObjectById(Identity.class, (String)quickLinkIdentityIds.get(x));
+  logger.debug("A USER:  "+ aUser);
+  logger.debug("A USER IS:  "+ aUser.getName());
+  identityNames.add(aUser.getName());
+}
+</Source>
+    </Script>
+    <Transition to="Confirm Selected Users"/>
+  </Step>
+  <Step icon="Default" name="Confirm Selected Users" posX="227" posY="24">
+    <Approval name="Confirm Selected Users" owner="ref:requester" return="terminationDate" send="identityNames">
+      <Arg name="workItemType"/>
+      <Arg name="workItemDescription"/>
+      <Arg name="workItemForm"/>
+    </Approval>
+    <Transition to="Set Values">
+      <Script>
+        <Source>import java.text.SimpleDateFormat;
+import java.util.Calendar;
+import java.util.Date;
+import org.apache.log4j.Logger;
+
+Logger  logger = Logger.getLogger("com.aci.wf.term");
+logger.debug("----");
+
+SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd");
+Date date = Calendar.getInstance().getTime();
+String today =   sdf.format(date);
+String term = null;
+if(term!=null) {
+  sdf.format(terminationDate);
+}
+
+logger.debug(" today is:  "+ today);
+logger.debug(" term is:  "+ term);
+
+int now = Integer.parseInt(today);
+int then = (term==null?0:Integer.parseInt(term));
+
+	if(then>now) {
+  logger.debug(" Schedule Event is:  ");
+  return true;
+} else {
+logger.debug("Returning ");
+  return true;
+}
+</Source>
+      </Script>
+    </Transition>
+    <Transition to="Parse Cart"/>
+  </Step>
+  <Step icon="Default" name="Set Values" posX="294" posY="153">
+    <Script>
+      <Source>
+import org.apache.log4j.Logger;
+
+Logger  logger = Logger.getLogger("com.aci.wf.term");
+logger.debug("----");
+identityName =(String)identityNames.get(incrementor);
+incrementor = incrementor +1;
+
+logger.debug("incrementor:  " + incrementor);
+logger.debug("identityName:  "+ identityName);
+workflow.put("termName", identityName);
+workflow.put("incrementor", incrementor);
+     </Source>
+    </Script>
+    <Transition to="Schedule Terminate" when="script: incrementor&lt;=identityNames.size();"/>
+    <Transition to="Stop"/>
+  </Step>
+  <Step action="call:scheduleWorkflowEvent" icon="Task" name="Schedule Terminate" posX="349" posY="277">
+    <Arg name="owner" value="ref:identityName"/>
+    <Arg name="identityName" value="ref:termName"/>
+    <Arg name="workflow">
+      <Script>
+        <Source>
+import sailpoint.object.Configuration;
+import org.apache.log4j.Logger;
+
+Logger  logger = Logger.getLogger("com.aci.wf.term");
+
+logger.debug("Terminate....");
+String wfName="ACI - Terminate Disable Accounts";
+
+//Configuration conf=context.getObjectByName(Configuration.class, "Deprovisioning Configuration");
+/*
+if(conf!=null){
+logger.debug("Conf is not null "+conf);
+  wfName=conf.get("DeprovisioningUpdateWorkflow");
+  logger.debug("Running wf: "+wfName);
+} else {
+  logger.error("Cannot find configuration object 'Deprovisioning Configuration');
+}*/
+logger.debug("size: "+identityNames.size()+" incrementor: "+incrementor);
+logger.debug("Scheduling Terminate with workflow '"+wfName+" identity: "+termName);
+return wfName;
+      </Source>
+      </Script>
+    </Arg>
+    <Arg name="scheduleDate" value="ref:terminationDate"/>
+    <Arg name="eventName" value="string:Terminate User"/>
+    <Transition to="Set Values"/>
+  </Step>
+  <Step icon="Default" name="Parse Cart" posX="376" posY="21">
+    <Script>
+      <Source>
+import sailpoint.seri.util.WorkflowUtils;
+import org.apache.log4j.Logger;
+
+Logger  logger = Logger.getLogger("com.aci.wf.term");
+
+logger.debug("----");
+
+
+for(int x =0; x&lt;identityNames.size();x++) {
+  String identityName = (String)identityNames.get(x);
+  logger.debug("parsing "+identityName);
+
+// This doesn't need to go through the whole workflow process
+// Just send it direct to the Provisioner.
+// Then fire events
+
+  WorkflowUtils.setIIQAttribute(context, identityName, "inactive", "true", true);
+}
+logger.debug("----");
+</Source>
+    </Script>
+    <Transition to="Stop"/>
+  </Step>
+  <Step icon="Stop" name="Stop" posX="753" posY="27"/>
+</Workflow>

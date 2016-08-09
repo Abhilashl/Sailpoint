@@ -1,0 +1,639 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<!DOCTYPE Workflow PUBLIC "sailpoint.dtd" "sailpoint.dtd">
+<Workflow created="1431100975250" explicitTransitions="true" id="8a8596e54d343e6a014d3443e8920003" libraries="Identity" modified="1460127984862" name="ACI - Terminate Disable Accounts" type="IdentityLifecycle">
+  <Variable input="true" name="plan">
+    <Description>The provisioning plan ready to execute.</Description>
+  </Variable>
+  <Variable input="true" name="flow">
+    <Description>The name of the LCM flow that launched this workflow.
+
+      This is one of these three values:
+ 
+      AccountsRequest
+      EntitlementsRequest
+      RolesRequest</Description>
+  </Variable>
+  <Variable editable="true" initializer="string:false" name="optimisticProvisioning">
+    <Description>Set to true to enable optimistic provisioning.  This will cause
+      changes to the entitlements compiled from role assignments to be 
+      applied immediately to the identity cube rather than waiting
+      for the next refresh/reaggregation after the provisioning system
+      completes the request.</Description>
+  </Variable>
+  <Variable editable="true" initializer="string:true" name="foregroundProvisioning">
+    <Description>Normally provisioning is done in a step that uses the "background"
+      option to force the workflow to be suspend and be resumed in a
+      background task thread.  This prevents the browser session from
+      hanging since provision can sometimes take a long time.  For demos
+      and testing it can be better to do this in the foreground so that
+      provisioning will have been performed when control is returned to the
+      user.  This prevents having to run the Perform Maintenance task to 
+      see the resutls of the request.</Description>
+  </Variable>
+  <Variable initializer="string:Normal" input="true" name="workItemPriority">
+    <Description>The String version of a WorkItem.Priority. This variable is 
+       used to set the priority on all of the workitems generated 
+       as part of this workflow and also set on the IdentityRequest
+       object.</Description>
+  </Variable>
+  <Variable initializer="string:spadmin" input="true" name="fallbackApprover">
+    <Description>A String that specifies the name of the Identity that will 
+      be assigned any approvals where the owner of the approver 
+      can't be resolved. Example if the scheme is "owner" and the 
+      application doesn't specify and owner.</Description>
+  </Variable>
+  <Variable initializer="string:false" input="true" name="enableRetryRequest">
+    <Description>When set to true it will disable the workflow retry loop and let the 
+      Provision step launch requests to handle the retries.  Enabling
+      this flag will enable some older functionality.</Description>
+  </Variable>
+  <Variable initializer="string:LCM" input="true" name="source">
+    <Description>String version of sailpoint.object.Source to indicate
+      where the request originated.  Defaults to LCM.</Description>
+  </Variable>
+  <Variable initializer="string:true" name="trace"/>
+  <Variable name="approvalSet">
+    <Description>This attributes is set during the "Build Approval Set" step,
+       which builds this list by going through the ProvisioningPlan
+       to build the line items that need to be approved,
+
+       This variable includes all ApprovalItems that are part of 
+       the request process and is updated during the AfterScript
+       of the approval process by assimilating the decisions 
+       and comments from the Approvals copy of the ApprovalItem.</Description>
+  </Variable>
+  <Variable input="true" name="project"/>
+  <Variable name="identityRequestId" output="true">
+    <Description>The sequence id of the Identity request object which is stored in 
+       the name field of the identity request and auto-incremented.</Description>
+  </Variable>
+  <Variable name="workItemComments">
+    <Description>Global comments accumulated during the workflow which should be shared
+      with other approvals. When a new approval is created, the comments in this
+      list will be added to the work item.</Description>
+  </Variable>
+  <Variable input="true" name="managerElectronicSignature">
+    <Description>The name of the electronic signature object that should be used when workitems 
+       are completed by a manager.</Description>
+  </Variable>
+  <Variable input="true" name="ownerElectronicSignature">
+    <Description>The name of the electronic signature object that should be used when workitems 
+       are completed by object owners.</Description>
+  </Variable>
+  <Variable input="true" name="securityOfficerElectronicSignature">
+    <Description>The name of the electronic signature object that should be used when workitems 
+       are completed by the security officer.</Description>
+  </Variable>
+  <Variable input="true" name="trigger">
+    <Description>The IdentityTrigger</Description>
+  </Variable>
+  <Variable name="identityModel">
+    <Description>The identity model that is used to represent the identity being created.</Description>
+  </Variable>
+  <Variable input="true" name="event">
+    <Description>The IdentityChangeEvent</Description>
+  </Variable>
+  <Variable input="true" name="identityName">
+    <Description>The name of the identity.</Description>
+  </Variable>
+  <Variable input="true" name="userName">
+    <Description>The display name of the identity.</Description>
+  </Variable>
+  <Variable input="true" name="accountDeprovisionScenario"/>
+  <Variable input="true" name="daysToWaitForDeletion">
+    <Description>The native Identity</Description>
+  </Variable>
+  <Variable input="true" name="nativeIdentity">
+    <Description>The native Identity</Description>
+  </Variable>
+  <Variable input="true" name="applicationName">
+    <Description>The native Identity</Description>
+  </Variable>
+  <Variable input="true" name="accountDeprovisioningModelRule">
+    <Description>Account DeprovisioningModel Rule</Description>
+  </Variable>
+  <Variable input="true" name="accountDeprovisioningPlanRule"/>
+  <Variable input="true" name="accountDeprovisioningPostProvRule"/>
+  <Description>Disable all user accounts when an employee leaves the company.  Send
+       email notifications to the person's Manager and to any Application Owners
+       of non-authoritative Applications.  In other words, there is no reason
+       to alert the HR team, since they triggered this event in the first place.</Description>
+  <Step icon="Start" name="start" posX="28" posY="10" wait="1">
+    <Transition to="Update Oracle"/>
+  </Step>
+  <Step icon="Task" name="Update Oracle" posX="98" posY="10">
+    <Script>
+      <Source>
+import org.apache.log4j.Logger;
+import java.sql.Connection;  
+import java.sql.DriverManager;  
+import java.sql.PreparedStatement;  
+import java.sql.ResultSet;  
+import java.sql.SQLException;  
+import java.sql.Statement; 
+import java.util.ArrayList; 
+import java.util.Iterator; 
+import sailpoint.object.*;	  
+
+//Update staging table
+Logger  logger = Logger.getLogger("com.aci.wf.leaver");
+logger.debug("com.aci.wf.leaver - nuffer");
+Identity identObj = context.getObjectByName(Identity.class,identityName);
+
+Application app = context.getObjectByName(Application.class, "DEV HRMS");
+
+String driverClass = "oracle.jdbc.OracleDriver";
+String user = app.getAttributeValue("user");
+String pass = context.decrypt(app.getAttributeValue("password"));
+String url=app.getAttributeValue("url");
+
+String sqlQuery = "insert into ACI_CUSTOM.ACI_EMPLOYEE_UPDATE_FROM_IDM (person_id, network_id, email_address, phone_number, user_id, termination_date, creation_date) values(?, ?, ?,?,?,sysdate,sysdate)";  
+//String sqlQuery = "insert into ACI_CUSTOM.ACI_EMPLOYEE_UPDATE_FROM_IDM (person_id, network_id, email_address, phone_number, termination_date, creation_date) values(?, ?, ?,?,sysdate,sysdate)";  
+
+Connection dbCxn = null;
+try {
+driverClazz = Class.forName(driverClass);
+dbCxn = DriverManager.getConnection(url, user, pass);  
+logger.debug("Successfully connected to db");
+PreparedStatement prStmt = dbCxn.prepareStatement(sqlQuery); 
+String personId = identObj.getAttribute("personId");
+String networkId = identObj.getAttribute("networkId");
+String email = identObj.getAttribute("email");
+String phone = identObj.getAttribute("WORK_TELEPHONE");
+String uid = identObj.getAttribute("oracleUsername");
+logger.debug("PersonId: "+personId+" networkId: "+networkId+" email: "+email+" phone: "+phone+" uid: "+uid);
+
+prStmt.setString(1, personId);
+prStmt.setString(2, networkId);
+prStmt.setString(3, email);
+prStmt.setString(4, phone);
+prStmt.setString(5, uid);
+
+ResultSet rs = prStmt.executeQuery();  
+}catch(Exception e){
+logger.error("Error occurred in new employee form processing", e);
+throw(e);
+//return false;
+}finally {
+dbCxn.close();
+}
+
+//
+
+</Source>
+    </Script>
+    <Transition to="Create Disable Account Request"/>
+  </Step>
+  <Step icon="Analysis" name="Create Disable Account Request" posX="232" posY="10" resultVariable="plan">
+    <Script>
+      <Source>
+import org.apache.log4j.Logger;
+import sailpoint.object.*;	  
+import sailpoint.object.ProvisioningPlan;
+import sailpoint.object.ProvisioningPlan.AccountRequest;
+import java.util.*; 
+import sailpoint.aci.util.ACIUtil;
+import sailpoint.api.*;
+import java.text.*;
+
+Logger  logger = Logger.getLogger("com.aci.wf.leaver");
+DateFormat dateFormatter = new SimpleDateFormat("MM/dd/yyyy HH:mm:ss");
+
+now = new Date();
+
+Identity identObj = context.getObjectByName(Identity.class,identityName);
+
+//Set hr email
+String country = identObj.getAttribute("country");
+String ou = ACIUtil.getOUValue(country);
+logger.debug("user ou is "+ou);
+if ( ou.equals("EMEA") ) {
+  workflow.put("hrEmail", "mbox-emea-orientation@aciworldwide.com");
+}else if ( ou.equals("AP") ) {
+  workflow.put("hrEmail","mbox-ap-ecn-hr@aciworldwide.com");
+}else {
+   workflow.put("hrEmail", "mbox-am-orientation@aciworldwide.com");
+}
+
+
+String termDate = "";
+
+Identity manager = identObj.getManager();
+		if (null != manager) {
+			managerApprover = manager.getName();
+			workflow.put("managerEmail", manager.getEmail());
+			workflow.put("managerName", manager.getDisplayableName());
+		} else {
+			Identity idAdmin = context.getObjectByName(Identity.class, "spadmin");
+			managerApprover = "spadmin";
+			workflow.put("managerName", managerApprover);
+			if (null != idAdmin.getEmail()){
+				workflow.put("managerEmail", idAdmin.getEmail());
+			}
+		}
+
+List links = identObj.getLinks();
+List applist = new ArrayList();
+String sendLdapNotification = "false";
+if(plan==null) plan=new ProvisioningPlan();
+
+for(int x =0; x&lt;links.size();x++) {
+	HashMap map = new HashMap();
+  Link aLink = (Link)links.get(x);
+  String appName=aLink.getApplication().getName();
+  logger.debug("Disabling application: "+appName+" for identity: "+identityName+" Native: "+aLink.getNativeIdentity());
+  map.put("name", appName);
+
+  AccountRequest ar=new AccountRequest();
+   if ( appName.equals("DEV LDAP test.aciww.com") ) {
+  	//Can't disable ldap since its not supported 
+	sendLdapNotification = "true";
+	workflow.put("nativeId", aLink.getNativeIdentity());
+	workflow.put("appName", appName);
+  }else {
+	ar.setNativeIdentity(aLink.getNativeIdentity());
+	ar.setApplication(appName);
+	ar.setOperation(AccountRequest.Operation.Disable);
+  } 
+  if ( appName.contains("Active Directory") ) {
+	 ar.add(new AttributeRequest("description", ProvisioningPlan.Operation.Set, "IIQ leaver:  "+dateFormatter.format(now) ));
+
+       map.put("info", "Network ID");
+       //Get domain from dn
+       String dn = aLink.getNativeIdentity();
+       int dcindex=dn.indexOf("DC=");
+       String domain = dn.substring(dcindex+3, dn.indexOf(",", dcindex) );
+       logger.debug("Domain: "+domain);
+	map.put("account", domain+"\\"+aLink.getAttribute("sAMAccountName"));
+
+        //remove groups
+        logger.debug("Get AD groups..... ");
+        if ( aLink.getAttribute("memberOf")==null ) {
+		logger.debug("No groups...");
+	} else {
+	List newGroups = (List)aLink.getAttribute("memberOf");
+        logger.debug("Going through groups size "+newGroups.size());
+	for ( int i=0; i&lt;newGroups.size(); i++ ) {
+		String group = newGroups.get(i);
+		if ( !group.contains("Domain Users") ) {
+			ProvisioningPlan.AttributeRequest grpAttReq = new ProvisioningPlan.AttributeRequest();
+			grpAttReq.setName("memberOf");  //setting AD attribute name that will hold value from each iteration to be removed.
+			grpAttReq.setOperation(ProvisioningPlan.Operation.Remove); //setting operation to remove group
+			grpAttReq.setValue(group); //setting value of AD group
+			ar.add(grpAttReq); //adding grpAttReq to the Account Request
+		}
+	}
+        }
+  }else if ( appName.contains("Salesforce") || appName.contains("Clarity")){
+	map.put("info", "Single Sign On (SSO)");
+	map.put("account", aLink.getNativeIdentity());
+  }else {
+	map.put("info", "");
+        map.put("account", aLink.getNativeIdentity());
+  }
+  if ( appName.equals("DEV HRMS") ) {
+        aLink.setAttribute("IIQDisabled", "true");
+		termDate = aLink.getAttribute("ACTUAL_TERMINATION_DATE");
+		if ( Util.isEmpty(termDate) ) {
+			termDate = "Immediate";
+		}
+  } else {
+	applist.add(map);
+  }
+	
+	plan.addRequest(ar);
+//move AD disabled account
+/*
+   if (appName.equalsIgnoreCase("DEV Active Directory tst.aciww.com") ) {
+          AccountRequest mreq = new AccountRequest();
+          
+          mreq.setApplication(appName);
+          mreq.setOperation(AccountRequest.Operation.Modify);
+        
+          //String nid = aLink.getNativeIdentity();
+          String cn = aLink.getAttribute("cn");
+          //OU=Users,OU=Disabled Accounts,OU=Dev,DC=tst,DC=aciww,DC=com
+          //String disabledou = "OU=Users,OU=Disabled Accounts,OU=Dev,DC=tst,DC=aciww,DC=com";
+          String disabledou = "OU=Inactive,OU=UserAccounts,OU=Dev,DC=tst,DC=aciww,DC=com";
+          String newid="CN="+cn.replaceAll(",","\\,")+","+disabledou;
+          logger.debug("Moving native id: "+aLink.getNativeIdentity());
+            mreq.setNativeIdentity(aLink.getNativeIdentity());
+           aLink.setNativeIdentity(newid);
+           mreq.add(new AttributeRequest("AC_NewParent",ProvisioningPlan.Operation.Set, disabledou));
+           mreq.add(new AttributeRequest("description", ProvisioningPlan.Operation.Set, "IIQ leaver:  "+dateFormatter.format(now) ));
+          plan.addRequest(mreq);
+       }
+*/
+}  
+logger.debug("Setting identity attributes");
+//identObj.setInactive(true);
+identObj.setPassword("");
+//logger.debug(identObj.isInactive());
+context.saveObject(identObj);
+context.commitTransaction();
+
+logger.debug("Done");
+workflow.put("applist", applist);
+workflow.put("plan", plan);
+
+workflow.put("firstname", identObj.getFirstname());
+workflow.put("lastname", identObj.getLastname());
+workflow.put("employeeEmail", identObj.email);
+workflow.put("employeeTitle", identObj.getAttribute("employeeTitle"));
+workflow.put("personType", identObj.getAttribute("personType"));
+workflow.put("department", identObj.getAttribute("DEPT_NAME"));
+workflow.put("location", identObj.getAttribute("location"));
+workflow.put("country", identObj.getAttribute("country"));
+workflow.put("termDate", termDate);
+workflow.put("sendLdapNotification", sendLdapNotification);
+//Send notification
+
+return plan;
+</Source>
+    </Script>
+    <Transition to="Compile Project"/>
+  </Step>
+  <Step action="call:compileProvisioningProject" name="Compile Project" posX="502" posY="10" resultVariable="project">
+    <Arg name="identityName" value="ref:identityName"/>
+    <Arg name="plan" value="ref:plan"/>
+    <Arg name="requester" value="string:spadmin"/>
+    <Arg name="source" value="string:UI"/>
+    <Arg name="optimisticProvisioning" value="string:false"/>
+    <Arg name="requireCreateTemplates" value="string:false"/>
+    <Arg name="noApplicationTemplates" value="string:true"/>
+    <Description>Compile the provisioning plan into a provisioning project.
+If you need to pass in provisioner options like "noFiltering"
+or "noRoleDeprovisioning" you must pass them as explicit
+arguments to the call.
+The evaluation options "requester" and "source" are commonly
+set here.
+You can also pass things into the Template and Field scripts by
+defining Args in this step.</Description>
+    <Transition to="Provision"/>
+  </Step>
+  <Step action="call:provisionProject" icon="Provision" name="Provision" posX="652" posY="10">
+    <Arg name="background" value="string:false"/>
+    <Arg name="project" value="ref:project"/>
+    <Description>Provision the project.</Description>
+    <Transition to="Refresh Identity"/>
+  </Step>
+  <Step action="call:refreshIdentity" icon="Task" name="Refresh Identity" posX="754" posY="10">
+    <Arg name="identityName" value="ref:identityName"/>
+    <Arg name="correlateEntitlements" value="string:true"/>
+    <Arg name="provision" value="string:true"/>
+    <Arg name="synchronizeAttributes" value="string:false"/>
+    <Arg name="refreshLinks" value="script:return false;"/>
+    <Description>Update the identity with anything we might have provisioned to applications</Description>
+    <Transition to="Move Disable Account Request"/>
+  </Step>
+  <Step icon="Analysis" name="Move Disable Account Request" posX="912" posY="10">
+    <Script>
+      <Source>
+import org.apache.log4j.Logger;
+import sailpoint.object.*;	  
+import sailpoint.object.ProvisioningPlan;
+import sailpoint.object.ProvisioningPlan.AccountRequest;
+import java.util.*; 
+import sailpoint.aci.util.ACIUtil;
+import sailpoint.api.*;
+import java.text.*;
+
+Logger  logger = Logger.getLogger("com.aci.wf.leaver");
+
+Identity identObj = context.getObjectByName(Identity.class,identityName);
+
+List links = identObj.getLinks();
+List applist = new ArrayList();
+List toremove = new ArrayList();
+if(plan==null) plan=new ProvisioningPlan();
+
+for(int x =0; x&lt;links.size();x++) {
+	HashMap map = new HashMap();
+  Link aLink = (Link)links.get(x);
+  String appName=aLink.getApplication().getName();
+   if (appName.equalsIgnoreCase("DEV Active Directory tst.aciww.com") ) {
+          AccountRequest mreq = new AccountRequest();
+          
+          mreq.setApplication(appName);
+          mreq.setOperation(AccountRequest.Operation.Modify);
+        
+          //String nid = aLink.getNativeIdentity();
+          String cn = aLink.getAttribute("cn");
+          //OU=Users,OU=Disabled Accounts,OU=Dev,DC=tst,DC=aciww,DC=com
+          //String disabledou = "OU=Users,OU=Disabled Accounts,OU=Dev,DC=tst,DC=aciww,DC=com";
+          String disabledou = "OU=Inactive,OU=UserAccounts,OU=Dev,DC=tst,DC=aciww,DC=com";
+          String newid="CN="+cn.replaceAll(",","\\,")+","+disabledou;
+          logger.debug("Moving native id: "+aLink.getNativeIdentity());
+            mreq.setNativeIdentity(aLink.getNativeIdentity());
+           toremove.add(aLink.getNativeIdentity());
+           mreq.add(new AttributeRequest("AC_NewParent",ProvisioningPlan.Operation.Set, disabledou));
+           //mreq.add(new AttributeRequest("description", ProvisioningPlan.Operation.Set, "IIQ leaver:  "+dateFormatter.format(now) ));
+          plan.addRequest(mreq);
+
+          //identObj.remove(aLink);  
+        
+              aLink.setNativeIdentity(newid);
+          logger.debug("Native id set to "+aLink.getNativeIdentity());
+          aLink.setIdentity(identObj);
+          aLink.setAttribute("distinguishedName", newid);
+          //identObj.add(aLink);
+          
+          context.saveObject( aLink);
+          context.commitTransaction();
+
+       }//endif
+
+if (appName.equalsIgnoreCase("PRD Active Directory ap.tsacorp.com") ) {
+	  AccountRequest mreq = new AccountRequest();
+	  mreq.setApplication(appName);
+	  mreq.setOperation(AccountRequest.Operation.Modify);
+	
+	  //String nid = aLink.getNativeIdentity();
+	  String cn = aLink.getAttribute("cn");
+	  //OU=Users,OU=Disabled Accounts,OU=Dev,DC=tst,DC=aciww,DC=com
+	  String disabledou = "OU=Users,OU=Disabled Accounts,DC=ap,DC=tsacorp,DC=com";
+	  String newid="CN="+cn.replaceAll(",","\\,")+","+disabledou;
+	  logger.debug("Moving native id: "+aLink.getNativeIdentity());
+	  mreq.setNativeIdentity(aLink.getNativeIdentity());
+	  toremove.add(aLink.getNativeIdentity());
+	  mreq.add(new AttributeRequest("AC_NewParent",ProvisioningPlan.Operation.Set, disabledou));
+	   //mreq.add(new AttributeRequest("description", ProvisioningPlan.Operation.Set, "IIQ leaver:  "+dateFormatter.format(now) ));
+	  plan.addRequest(mreq);
+	  aLink.setNativeIdentity(newid);
+	  logger.debug("Native id set to "+aLink.getNativeIdentity());
+	  aLink.setIdentity(identObj);
+	  aLink.setAttribute("distinguishedName", newid);
+           context.saveObject( aLink);
+          context.commitTransaction();
+
+} //endif
+
+if (appName.equalsIgnoreCase("PRD Active Directory eu.tsacorp.com") ) {
+	  AccountRequest mreq = new AccountRequest();
+	  mreq.setApplication(appName);
+	  mreq.setOperation(AccountRequest.Operation.Modify);
+	
+	  //String nid = aLink.getNativeIdentity();
+	  String cn = aLink.getAttribute("cn");
+	  //OU=Users,OU=Disabled Accounts,OU=Dev,DC=tst,DC=aciww,DC=com
+	  String disabledou = "OU=Users,OU=Disabled Accounts,DC=eu,DC=tsacorp,DC=com";
+	  String newid="CN="+cn.replaceAll(",","\\,")+","+disabledou;
+	  logger.debug("Moving native id: "+aLink.getNativeIdentity());
+	  mreq.setNativeIdentity(aLink.getNativeIdentity());
+	  toremove.add(aLink.getNativeIdentity());
+	  mreq.add(new AttributeRequest("AC_NewParent",ProvisioningPlan.Operation.Set, disabledou));
+	   //mreq.add(new AttributeRequest("description", ProvisioningPlan.Operation.Set, "IIQ leaver:  "+dateFormatter.format(now) ));
+	  plan.addRequest(mreq);
+	  aLink.setNativeIdentity(newid);
+	  logger.debug("Native id set to "+aLink.getNativeIdentity());
+	  aLink.setIdentity(identObj);
+	  aLink.setAttribute("distinguishedName", newid);
+           context.saveObject( aLink);
+          context.commitTransaction();
+
+} //endif
+
+if (appName.equalsIgnoreCase("PRD Active Directory s1ad.s1.com") ) {
+	  AccountRequest mreq = new AccountRequest();
+	  mreq.setApplication(appName);
+	  mreq.setOperation(AccountRequest.Operation.Modify);
+	
+	  //String nid = aLink.getNativeIdentity();
+	  String cn = aLink.getAttribute("cn");
+	  //OU=Users,OU=Disabled Accounts,OU=Dev,DC=tst,DC=aciww,DC=com
+	  String disabledou = "OU=Users,OU=Disabled Accounts,DC=S1AD,DC=s1,DC=com";
+	  String newid="CN="+cn.replaceAll(",","\\,")+","+disabledou;
+	  logger.debug("Moving native id: "+aLink.getNativeIdentity());
+	  mreq.setNativeIdentity(aLink.getNativeIdentity());
+	  toremove.add(aLink.getNativeIdentity());
+	  mreq.add(new AttributeRequest("AC_NewParent",ProvisioningPlan.Operation.Set, disabledou));
+	   //mreq.add(new AttributeRequest("description", ProvisioningPlan.Operation.Set, "IIQ leaver:  "+dateFormatter.format(now) ));
+	  plan.addRequest(mreq);
+	  aLink.setNativeIdentity(newid);
+	  logger.debug("Native id set to "+aLink.getNativeIdentity());
+	  aLink.setIdentity(identObj);
+	  aLink.setAttribute("distinguishedName", newid);
+           context.saveObject( aLink);
+          context.commitTransaction();
+
+} //endif
+
+}  
+Provisioner p= new Provisioner(context);
+		p.execute(plan);
+//remove any unneeded links
+List links = identObj.getLinks();
+logger.debug("link size: "+links.size());
+for(int x =0; x&lt;links.size();x++) {
+	HashMap map = new HashMap();
+  Link aLink = (Link)links.get(x);
+  logger.debug("links are: "+aLink.getNativeIdentity());
+  if ( toremove!=null &amp;&amp; toremove.contains(aLink.getNativeIdentity()) ) {
+    identObj.remove(aLink);
+  }
+
+}
+context.saveObject( identObj);
+
+          context.commitTransaction();
+
+</Source>
+    </Script>
+    <Transition to="Refresh"/>
+  </Step>
+  <Step action="call:refreshIdentity" icon="Task" name="Refresh" posX="1166" posY="10">
+    <Arg name="identityName" value="ref:identityName"/>
+    <Arg name="correlateEntitlements" value="string:true"/>
+    <Arg name="provision" value="string:true"/>
+    <Arg name="synchronizeAttributes" value="string:false"/>
+    <Arg name="refreshLinks" value="script:return false;"/>
+    <Description>Update the identity with anything we might have provisioned to applications</Description>
+    <Transition to="Notify Admin"/>
+  </Step>
+  <Step icon="Email" name="Notify Admin" posX="1252" posY="10">
+    <Description>Notify admin of progress</Description>
+    <Script>
+      <Source>
+import java.util.ArrayList; 
+import java.util.Iterator; 
+import sailpoint.tools.Message;
+import sailpoint.object.EmailOptions;
+import sailpoint.object.EmailTemplate;
+import sailpoint.api.*;
+		//Send notification
+EmailOptions options = new EmailOptions();
+
+EmailTemplate et = context.getObjectByName(EmailTemplate.class, "ACI - Disable Accounts");
+options.setTo(hrEmail);
+et.setCc(managerEmail+",mbox-idm-dev@aciworldwide.com");
+// options.setVariable("to", hrEmail);
+//options.setVariable("cc", managerEmail);
+//options.setVariable("bcc","mbox-idm-dev@aciworldwide.com");
+options.setSendImmediate(true);
+options.setNoRetry(true);
+options.setVariable("name", identityName);
+options.setVariable("firstname", firstname);
+options.setVariable("lastname", lastname);
+options.setVariable("email", employeeEmail);
+options.setVariable("manager", managerName);
+options.setVariable("employeeTitle", employeeTitle);
+options.setVariable("personType", personType);
+options.setVariable("department", department);
+options.setVariable("location", location);
+options.setVariable("country", country);
+options.setVariable("termDate", termDate);
+options.setVariable("list", applist);
+context.sendEmailNotification(et, options);
+
+if ( sendLdapNotification!=null &amp;&amp; sendLdapNotification.equals("true") ) {
+	//Send ldap notification 
+	EmailTemplate ldapet = context.getObjectByName(EmailTemplate.class, "ACI - LDAP Disable Account");
+	Identity workgroup = context.getObjectByName(Identity.class, "IIQ Admins");
+	Map ldapMap = new HashMap();
+	ldapMap.put("nativeId", nativeId);
+	ldapMap.put("appName", appName);
+	ldapMap.put("firstname", firstname);
+	ldapMap.put("lastname", lastname);
+	EmailOptions options = new EmailOptions(ObjectUtil.getEffectiveEmails(this.context, workgroup), ldapMap);
+	context.sendEmailNotification(ldapet, options);
+}
+		</Source>
+    </Script>
+    <Transition to="Stop"/>
+  </Step>
+  <Step catches="complete" icon="Stop" name="Stop" posX="1378" posY="10">
+    <Script>
+      <Source>
+import java.util.ArrayList; 
+import java.util.Iterator; 
+import sailpoint.tools.Message;
+import org.apache.log4j.Logger;
+import sailpoint.object.EmailOptions;
+import sailpoint.object.EmailTemplate;
+ 
+Logger  logger = Logger.getLogger("com.aci.wf.joiner");
+ ArrayList messages = wfcase.getMessages(); 
+
+if (messages != null) {
+   logger.error("Error occurred in leaver workflow..."); 
+    //System.out.println("wfcase = " + wfcase.toXml()); 
+ 
+   Iterator iter = messages.iterator();   
+    while (iter.hasNext()) {
+            Message next = (Message) iter.next();
+            logger.error("Message = " + next.toString()); 
+      }
+EmailOptions options = new EmailOptions();
+options.setTo("mbox-idm-dev@aciworldwide.com");
+EmailTemplate et = context.getObjectByName(EmailTemplate.class, "ACI - Error");
+options.setSendImmediate(true);
+options.setNoRetry(true);
+options.setVariable("name", identityName);
+options.setVariable("list", messages);
+context.sendEmailNotification(et, options);
+
+}
+      </Source>
+    </Script>
+  </Step>
+</Workflow>
