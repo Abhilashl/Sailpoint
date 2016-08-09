@@ -1,0 +1,146 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<!DOCTYPE Workflow PUBLIC "sailpoint.dtd" "sailpoint.dtd">
+<Workflow created="1465004819536" explicitTransitions="true" id="8a8596e454dd98970155191784501404" modified="1470323240300" name="ACI - Fusion Leaver RemedyForce" type="IdentityLifecycle">
+  <Variable initializer="true" input="true" name="trace"/>
+  <Variable input="true" name="identityName"/>
+  <Variable name="employeeEmail"/>
+  <Variable name="networkId"/>
+  <Variable name="managerEmail"/>
+  <Variable name="managerName"/>
+  <Variable name="postalCode"/>
+  <Variable name="region"/>
+  <Variable name="city"/>
+  <Variable name="address"/>
+  <Variable name="location"/>
+  <Variable name="country"/>
+  <Variable name="department"/>
+  <Variable name="division"/>
+  <Variable name="personType"/>
+  <Variable name="employeeTitle"/>
+  <Variable name="endDate"/>
+  <Variable name="knownas"/>
+  <Variable name="firstname"/>
+  <Variable name="lastname"/>
+  <Variable name="middlename"/>
+  <Step icon="Start" name="Start" posX="120" posY="91">
+    <Transition to="Update Fields"/>
+  </Step>
+  <Step icon="Stop" name="Stop" posX="631" posY="90"/>
+  <Step icon="Task" name="Update Fields" posX="264" posY="91">
+    <Arg name="country" value="ref:country"/>
+    <Arg name="firstname" value="ref:firstname"/>
+    <Arg name="address" value="ref:address"/>
+    <Arg name="endDate" value="ref:endDate"/>
+    <Arg name="city" value="ref:city"/>
+    <Arg name="postalCode" value="ref:postalCode"/>
+    <Arg name="employeeEmail" value="ref:employeeEmail"/>
+    <Arg name="managerName" value="ref:managerName"/>
+    <Arg name="lastname" value="ref:lastname"/>
+    <Arg name="division" value="ref:division"/>
+    <Arg name="managerEmail" value="ref:managerEmail"/>
+    <Arg name="employeeTitle" value="ref:employeeTitle"/>
+    <Arg name="knownas" value="ref:knownas"/>
+    <Arg name="networkId" value="ref:networkId"/>
+    <Arg name="location" value="ref:location"/>
+    <Arg name="personType" value="ref:personType"/>
+    <Arg name="department" value="ref:department"/>
+    <Arg name="region" value="ref:region"/>
+    <Description>Update the fields that are defined for the business process</Description>
+    <Return name="networkId" to="networkId"/>
+    <Script>
+      <Source>/*
+    Workflow:  ACI - Fusion Leaver RemedyForce
+    Step:  Update Fields
+    
+    Date:  August 4, 2016
+    Version:  1.0
+*/
+
+
+import org.apache.log4j.Logger;
+import sailpoint.object.*;
+import sailpoint.aci.util.ACIUtil;
+
+
+Logger logger = Logger.getLogger("com.aci.rule.aci_bp_test");
+logger.debug ("ACI - Fusion Leaver RemedyForce(Update Fields)");
+
+Identity identityObject = context.getObjectByName(Identity.class, identityName);
+String employeeEmail = identityObject.getEmail();
+String networkId = identityObject.getAttribute("networkId");
+String managerEmail  = identityObject.getManager().getEmail();
+String managerName  = identityObject.getManager().getDisplayName();
+String postalCode  = identityObject.getAttribute("postalCode");
+String region  = identityObject.getAttribute("region");
+String city  = identityObject.getAttribute("city");
+String address = identityObject.getAttribute("address");
+String location = identityObject.getAttribute("location");
+String country = identityObject.getAttribute("country");
+String department = identityObject.getAttribute("DEPT_NAME");
+String division = identityObject.getAttribute("division");
+String personType = identityObject.getAttribute("personType");
+String employeeTitle = identityObject.getAttribute("employeeTitle");
+String endDate = identityObject.getAttribute("enterpriseEndDate");
+String firstname = identityObject.getFirstname();
+String lastname = identityObject.getLastname();
+
+//Check if Null or empty
+if ( !Util.isNotNullOrEmpty(postalCode) ) postalCode = "";
+if ( !Util.isNotNullOrEmpty(region) ) region = "";
+if ( !Util.isNotNullOrEmpty(city) ) city = "";
+if ( !Util.isNotNullOrEmpty(address) ) address = "";
+if ( !Util.isNotNullOrEmpty(location) ) location = "";
+if ( !Util.isNotNullOrEmpty(country) ) country = "";
+if ( !Util.isNotNullOrEmpty(department) ) DEPT_NAME = "";
+if ( !Util.isNotNullOrEmpty(division) ) division = "";
+if ( !Util.isNotNullOrEmpty(employeeTitle) ) employeeTitle = "";
+if ( !Util.isNotNullOrEmpty(networkId) ) networkId = "";
+if ( !Util.isNotNullOrEmpty(employeeEmail ) ) employeeEmail = "";
+
+//  Update WFlow variables
+workflow.put("employeeEmail",employeeEmail);
+workflow.put("networkId",networkId);
+workflow.put("managerEmail",managerEmail);
+workflow.put("managerName",managerName);
+workflow.put("postalCode",postalCode);
+workflow.put("region",region);
+workflow.put("city",city);
+workflow.put("address",address);
+workflow.put("location",location);
+workflow.put("country",country);
+workflow.put("department",department);
+workflow.put("division",division);
+workflow.put("personType",personType);
+workflow.put("employeeTitle",employeeTitle);
+workflow.put("endDate",endDate);
+workflow.put("firstname",firstname);
+workflow.put("lastname",lastname);
+</Source>
+    </Script>
+    <Transition to="Generate RemedyForce Ticket"/>
+  </Step>
+  <Step action="call:sendEmail" configForm="Provisioning Notification Step Form" icon="Email" name="Generate RemedyForce Ticket" posX="441" posY="90">
+    <Arg name="template" value="ACI - RemedyForce Leaver Email"/>
+    <Arg name="country" value="ref:country"/>
+    <Arg name="firstname" value="ref:firstname"/>
+    <Arg name="address" value="ref:address"/>
+    <Arg name="city" value="ref:city"/>
+    <Arg name="endDate" value="ref:endDate"/>
+    <Arg name="postalCode" value="ref:postalCode"/>
+    <Arg name="employeeEmail" value="ref:employeeEmail"/>
+    <Arg name="managerName" value="ref:managerName"/>
+    <Arg name="lastname" value="ref:lastname"/>
+    <Arg name="division" value="ref:division"/>
+    <Arg name="managerEmail" value="ref:managerEmail"/>
+    <Arg name="employeeTitle" value="ref:employeeTitle"/>
+    <Arg name="knownas" value="ref:knownas"/>
+    <Arg name="networkId" value="ref:networkId"/>
+    <Arg name="location" value="ref:location"/>
+    <Arg name="to" value="steve.nuffer@aciworldwide.com"/>
+    <Arg name="region" value="ref:region"/>
+    <Arg name="department" value="ref:department"/>
+    <Arg name="personType" value="ref:personType"/>
+    <Description>Create a RemedyForce ticket</Description>
+    <Transition to="Stop"/>
+  </Step>
+</Workflow>
