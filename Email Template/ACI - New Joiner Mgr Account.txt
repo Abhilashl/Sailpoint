@@ -1,0 +1,112 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<!DOCTYPE EmailTemplate PUBLIC "sailpoint.dtd" "sailpoint.dtd">
+<EmailTemplate created="1433264201236" id="8a8596e54db52f23014db5341e140004" modified="1469550183081" name="ACI - New Joiner Mgr Account">
+  <Body>
+&lt;html>
+&lt;head>
+&lt;style>
+table, th, td {
+    border: 1px solid black;
+}
+&lt;/style>
+&lt;/head>
+&lt;body>
+&lt;h1 style="text-align:center">&lt;img src="https://identitydev.am.tsacorp.com/identityiq/images/ACI/01.png">&lt;/h1>
+&lt;h2 style="text-align:center">&lt;b>ACI Onboarding Notification 1 of 2&lt;/b>&lt;/h2>
+&lt;p style="text-align:center">&lt;b>Employee Information&lt;/b>&lt;/p>
+&lt;table align="center">
+  &lt;tr>
+    &lt;td>&lt;b>Name:&lt;/b>&lt;/td>
+    &lt;td>$firstname $lastname &lt;/td>		
+  &lt;/tr>
+  &lt;tr>
+    &lt;td>&lt;b>Title:&lt;/b>&lt;/td>
+    &lt;td>$employeeTitle &lt;/td>		
+  &lt;/tr>
+  &lt;tr>
+    &lt;td>&lt;b>Type:&lt;/b>&lt;/td>
+    &lt;td>$personType &lt;/td>		
+  &lt;/tr>
+  &lt;tr>
+    &lt;td>&lt;b>Email Address:&lt;/b>&lt;/td>
+    &lt;td>$email&lt;/td>		
+  &lt;/tr>
+  &lt;tr>
+    &lt;td>&lt;b>Employee Manager:&lt;/b>&lt;/td>
+    &lt;td>$manager&lt;/td>		
+  &lt;/tr>
+  &lt;tr>
+    &lt;td>&lt;b>Department:&lt;/b>&lt;/td>
+    &lt;td>$department&lt;/td>		
+  &lt;/tr>
+  &lt;tr>
+    &lt;td>&lt;b>Location / Country:&lt;/b>&lt;/td>
+    &lt;td>$location / $country&lt;/td>		
+  &lt;/tr>
+  &lt;tr>
+    &lt;td>&lt;b>Start Date:&lt;/b>&lt;/td>
+    &lt;td>$startDate&lt;/td>		
+  &lt;/tr>
+&lt;/table>
+&lt;p style="text-align:center">&lt;b>Accounts Provisioned &lt;/b>&lt;/p>
+&lt;table align="center">
+  &lt;tr>
+    &lt;td>&lt;b>Application&lt;/b>&lt;/td>
+    &lt;td>&lt;b>Account&lt;/b>&lt;/td>
+	&lt;td>&lt;b>Additional Information&lt;/b>&lt;/td>	
+  &lt;/tr>
+  &lt;tr>
+    &lt;td>Active Directory&lt;/td>
+    &lt;td>$employeeOU\\$networkId &lt;/td>
+	&lt;td>Network ID &lt;/td>	
+  &lt;/tr>
+#if ($!sfusername )
+&lt;tr>
+    &lt;td>Salesforce&lt;/td>
+    &lt;td>$sfusername &lt;/td>
+	&lt;td>Single Sign On (SSO) &lt;/td>	
+  &lt;/tr>
+#end
+#if ($!clusername )
+  &lt;tr>
+    &lt;td>Clarity&lt;/td>
+    &lt;td>$!clusername &lt;/td>
+	&lt;td>Single Sign On (SSO) &lt;/td>	
+  &lt;/tr>
+#end
+#if ($!webexUser )
+  &lt;tr>
+    &lt;td>Webex&lt;/td>
+    &lt;td>$!webexUser &lt;/td>
+	&lt;td>Single Sign On (SSO) &lt;/td>	
+  &lt;/tr>
+#end    
+&lt;/table>
+&lt;p style="text-align:center">To request additional accounts or privileges, visit ACI's Peer 2 Peer page and select Global Service Desk.&lt;/p>
+&lt;p style="text-align:center">Please contact the Global Service Desk at &lt;a href="tel:+1 (855) 224-3375">+1 (855) ACI-DESK&lt;/a> in the US &amp; Canada or &lt;a href="tel:+1 (404) 923-6600">+1 (404) 923-6600&lt;/a> for international locations if you have any questions or concerns.&lt;/p>
+&lt;/body>
+&lt;/html>
+ </Body>
+  <Description>
+	Email Template for Network ID. 
+  </Description>
+  <Signature>
+    <Inputs>
+      <Argument name="firstname" type="string">
+        <Description>Identity</Description>
+      </Argument>
+      <Argument name="lastname" type="string">
+        <Description>Identity</Description>
+      </Argument>
+      <Argument name="networkId" type="string">
+        <Description>Network Id </Description>
+      </Argument>
+      <Argument name="email" type="string">
+        <Description>Employee email </Description>
+      </Argument>
+    </Inputs>
+  </Signature>
+  <Subject>
+	New Hire - $firstname $lastname
+  </Subject>
+</EmailTemplate>

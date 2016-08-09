@@ -1,0 +1,62 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<!DOCTYPE EmailTemplate PUBLIC "sailpoint.dtd" "sailpoint.dtd">
+<EmailTemplate created="1470321381338" id="8a8594855620b543015655fbcfda008f" name="ACI - RemedyForce Leaver Email">
+  <Body>
+  &lt;html>
+&lt;h2>$personType ending on $endDate&lt;/h2>
+&lt;pre>
+&lt;h3>----- $personType Information  -----&lt;/h3>
+     Last Name:      $lastname
+     First Name:     $firstname
+
+     End Date:    $endDate
+     
+     Title:       $employeeTitle
+     Person Type: $personType
+     Division:    $division
+     Department:  $department
+
+     Country:     $country
+     Location:    $location
+     Address:     $address
+     City:        $city
+     Region:      $region
+     Postal code: $postalCode    
+
+     Manager:        $managerName
+     Manager Email:  $managerEmail
+
+          
+&lt;h3>-----  Account Information  -----&lt;/h3>
+     Network ID:  $networkId
+     Email:       $employeeEmail
+
+
+&lt;B>Statement of Confidentiality: &lt;/B>
+This e-mail message and any attachments may contain confidential, proprietary or on-public information. This information is intended solely for the designated recipient(s). If an addressing or transmission error has misdirected this e-mail, please notify the sender immediately and destroy this e-mail. Any review, dissemination, use or reliance upon this information by unintended recipients is prohibited.     
+&lt;/pre>     
+&lt;html>
+ </Body>
+  <Description>
+	Email Template for Network ID. 
+  </Description>
+  <Signature>
+    <Inputs>
+      <Argument name="firstname" type="string">
+        <Description>Identity</Description>
+      </Argument>
+      <Argument name="lastname" type="string">
+        <Description>Identity</Description>
+      </Argument>
+      <Argument name="networkId" type="string">
+        <Description>Network Id </Description>
+      </Argument>
+      <Argument name="email" type="string">
+        <Description>Employee email </Description>
+      </Argument>
+    </Inputs>
+  </Signature>
+  <Subject>
+     Term - $lastname, $firstname $endDate
+  </Subject>
+</EmailTemplate>
