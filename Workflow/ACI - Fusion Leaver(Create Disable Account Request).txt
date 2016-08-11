@@ -1,0 +1,190 @@
+/*
+    Workflow:  ACI - Fusion Leaver
+    Step:  Create Disable Account Request
+    
+    Date:  August 11, 2016
+    Version:  1.0
+*/
+
+import org.apache.log4j.Logger;
+import sailpoint.object.*;	  
+import sailpoint.object.ProvisioningPlan;
+import sailpoint.object.ProvisioningPlan.AccountRequest;
+import java.util.*; 
+import sailpoint.aci.util.ACIUtil;
+import sailpoint.api.*;
+import java.text.*;
+
+Logger  logger = Logger.getLogger("com.aci.wf.leaver");
+logger.debug("ACI - Fusion Leaver(Create Disable Account Request)");
+
+DateFormat dateFormatter = new SimpleDateFormat("MM/dd/yyyy HH:mm:ss");
+now = new Date();
+
+String sendLdapNotification = "false";
+
+Identity identityObj = context.getObjectByName(Identity.class,identityName);
+
+// Get the AD OU from countryCodeMap
+String identityCountry = identityObj.getAttribute("country");
+Custom custom = context.getObjectByName(Custom.class,"countryCodeMap");
+String ou = custom.get(identityCountry);
+
+// Setup Notification to HR        
+logger.debug("\tHR Notification"); 
+if ( ou.equals("EMEA") ) {
+    logger.debug("\tmbox-emea-orientation@aciworldwide.com");
+    workflow.put("hrEmail", "mbox-emea-orientation@aciworldwide.com");
+}else if ( ou.equals("AP") ) {
+  logger.debug("\tmbox-ap-ecn-hr@aciworldwide.com");
+    workflow.put("hrEmail","mbox-ap-ecn-hr@aciworldwide.com");
+}else {
+    logger.debug("\tmbox-am-orientation@aciworldwide.com");
+    workflow.put("hrEmail", "mbox-am-orientation@aciworldwide.com");
+}
+
+String termDate = "";
+
+Identity managerObj = identityObj.getManager();
+
+if (null != managerObj) {
+    managerApprover = managerObj.getName();
+    workflow.put("managerEmail", managerObj.getEmail());
+    workflow.put("managerName", managerObj.getDisplayableName());
+} else {
+    Identity idAdmin = context.getObjectByName(Identity.class, "spadmin");
+    managerApprover = "spadmin";
+    workflow.put("managerName", managerApprover);
+    if (null != idAdmin.getEmail()){
+        workflow.put("managerEmail", idAdmin.getEmail());
+    }
+}
+
+List linkLists = identityObj.getLinks();
+List applist = new ArrayList();
+
+// Create a new provision plan
+if (plan==null) plan=new ProvisioningPlan();
+
+    //For each Link
+    if ( null != linkLists ) {
+        for ( Link link : linkLists ) {
+            HashMap map = new HashMap();
+            String appName = link.getApplication().getName();
+            String acctName = link.getNativeIdentity();
+            String appConnectorType = link.getApplication().getConnector();
+            boolean isAppAuth = link.getApplication().isAuthoritative();
+                                   
+            AccountRequest acctReq = new AccountRequest();
+            acctReq.setNativeIdentity(acctName);
+            acctReq.setApplication(appName);
+            acctReq.setOperation(AccountRequest.Operation.Disable);
+            
+            //Check if the application can use an account Request
+            
+            // Based upon connector Type
+            switch (appConnectorType) {
+                //**************************************************************************
+                //*****  Active Directory
+                case "sailpoint.connector.ADLDAPConnector":
+                    // Set Application Attribute
+                    acctReq.add(new AttributeRequest("description", ProvisioningPlan.Operation.Set, "IIQ leaver:  "+dateFormatter.format(now) ));
+                    int dcindex = acctName.indexOf("DC=");
+                    String domain = acctName.substring(dcindex+3, acctName.indexOf(",", dcindex) );
+                        
+                    map.put("name", appName);
+                    map.put("account", domain+"\\" + link.getAttribute("sAMAccountName"));
+                    map.put("info", "Network ID");
+                    applist.add(map);  
+                    break;
+                //**************************************************************************
+                //*****  Salesforce
+                case "sailpoint.connector.ForceConnector":
+                    map.put("name", appName);
+                    map.put("account", acctName);
+                    map.put("info", "Single Sign On (SSO)");
+                    applist.add(map);  
+                    break;                    
+                //**************************************************************************
+                //*****  Open Connector
+                case "sailpoint.connector.OpenConnectorAdapter":
+                    map.put("name", appName);
+                    map.put("account", acctName);
+                    
+                    // Check the specific name of the Application
+                    if ( appName.toLowerCase().contains("clarity" ) ) {
+                        map.put("info", "Single Sign On (SSO)");
+                    } else {
+                        map.put("info", "");
+                    }
+                    applist.add(map);  
+                    break;                    
+                //**************************************************************************
+                //*****  Delimted file
+                case "sailpoint.connector.DelimitedFileConnector":                  
+                    // Check the specific name of the Application
+                    if ( appName.toLowerCase().contains("fusion" ) ) {
+                        // Fusion
+                        ;
+                    } else if ( appName.toLowerCase().contains("hrms" ) ) {
+                        // Oracle 11i
+                        ; 
+                    } else {
+                        // Other
+                        map.put("name", appName);
+                        map.put("account", acctName);
+                        map.put("info", "");
+                        applist.add(map);  
+                    }
+                    break;                                        
+                //**************************************************************************
+                //*****  Other
+                default:
+                    map.put("name", appName);
+                    map.put("account", acctName);
+                    map.put("info", "");    
+                    applist.add(map);  
+                    break;
+            }
+            // Is application Authoritative?
+            if ( isAppAuth) {
+               link.setAttribute("IIQDisabled", "true");
+               
+                // Get Fusion Term date if available
+                if ( appName.toLowerCase().contains("fusion" ) ) {
+                    termDate = link.getAttribute("ACTUAL_TERMINATION_DATE");
+                }
+                
+               if ( Util.isEmpty(termDate) ) {
+                   termDate = "Immediate";
+                }
+            }
+            
+            // Add the Application and Account to the List
+            plan.add(acctReq);   
+        }          
+    }
+
+logger.debug("Setting identity attributes");
+logger.debug("identityObj.isInactive=" + identityObj.isInactive());
+identityObj.setInactive(true);
+identityObj.setPassword("");
+context.saveObject(identityObj);
+context.commitTransaction();
+
+workflow.put("applist", applist);
+workflow.put("plan", plan);
+
+workflow.put("firstname", identityObj.getFirstname());
+workflow.put("lastname", identityObj.getLastname());
+workflow.put("employeeEmail", identityObj.email);
+workflow.put("employeeTitle", identityObj.getAttribute("employeeTitle"));
+workflow.put("personType", identityObj.getAttribute("personType"));
+workflow.put("department", identityObj.getAttribute("DEPT_NAME"));
+workflow.put("location", identityObj.getAttribute("location"));
+workflow.put("country", identityObj.getAttribute("country"));
+workflow.put("termDate", termDate);
+workflow.put("sendLdapNotification", sendLdapNotification);
+
+return plan;
+    

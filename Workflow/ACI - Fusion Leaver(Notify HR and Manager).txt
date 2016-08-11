@@ -1,0 +1,52 @@
+/*
+    Workflow:  ACI - Fusion Leaver
+    Step:  Notify HR and Manager
+    
+    Date:  August 11, 2016
+    Version:  1.0
+*/
+
+import java.util.ArrayList; 
+import java.util.Iterator; 
+import sailpoint.tools.Message;
+import sailpoint.object.EmailOptions;
+import sailpoint.object.EmailTemplate;
+import sailpoint.api.*;
+		//Send notification
+EmailOptions options = new EmailOptions();
+
+EmailTemplate emailTemplate = context.getObjectByName(EmailTemplate.class, "ACI - Leaver Mgr Account");
+
+emailTemplate.setTo( hrEmail );
+emailTemplate.setCc( managerEmail );
+emailTemplate.setBcc( "mbox-idm-prd@aciworldwide.com" );
+
+options.setSendImmediate(true);
+options.setNoRetry(true);
+options.setVariable("name", identityName);
+options.setVariable("firstname", firstname);
+options.setVariable("lastname", lastname);
+options.setVariable("email", employeeEmail);
+options.setVariable("manager", managerName);
+options.setVariable("employeeTitle", employeeTitle);
+options.setVariable("personType", personType);
+options.setVariable("department", department);
+options.setVariable("location", location);
+options.setVariable("country", country);
+options.setVariable("termDate", termDate);
+options.setVariable("list", applist);
+context.sendEmailNotification( emailTemplate, options);
+
+if ( sendLdapNotification!=null && sendLdapNotification.equals("true") ) {
+	//Send ldap notification 
+	EmailTemplate ldapEmailTemplate  = context.getObjectByName(EmailTemplate.class, "ACI - LDAP Disable Account");
+	Identity workgroup = context.getObjectByName(Identity.class, "IIQ Admins");
+	Map ldapMap = new HashMap();
+	ldapMap.put("nativeId", nativeId);
+	ldapMap.put("appName", appName);
+	ldapMap.put("firstname", firstname);
+	ldapMap.put("lastname", lastname);
+	EmailOptions options = new EmailOptions(ObjectUtil.getEffectiveEmails(this.context, workgroup), ldapMap);
+	context.sendEmailNotification( ldapEmailTemplate  , options );
+}
+		

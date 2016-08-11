@@ -106,17 +106,18 @@ logger.debug("\tidentityPerType=" + identityPerType.toLowerCase());
 *************************************************************************************/
 logger.debug("\tBirthright Applications");
 String appSForce = "TST Salesforce";
-String sfuser = identityEmail;
+String sfuser = identityEmail + "test.full"; // DEV UAT
+//String sfuser = identityEmail; // PRD
 
 String appWebex = "DEV Webex";
 String webexUser = identityEmail;
 String policyWebexName = "WebexPasswordPolicy";
 
 String appClarity = "TST Clarity";
-String appSourceOfRecord = "UAT Fusion HCM";
+String appSourceOfRecord = "DEV Fusion HCM";
 
-String appPrimaryAD= "UAT Active Directory tst.aciww.com"; 
-String baseDSN = "OU=Dev,DC=tst,DC=aciww,DC=com";
+String appPrimaryAD= "DEV Active Directory tst.aciww.com"; 
+String baseDSN = "OU=Dev,DC=tst,DC=aciww,DC=com"; // DEV UAT
 String policyADName = "AD Password Policy";
 String sAMAccountName = newNetworkId;
 
