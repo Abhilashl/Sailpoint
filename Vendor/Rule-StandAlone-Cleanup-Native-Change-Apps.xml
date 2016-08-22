@@ -1,0 +1,77 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<!DOCTYPE sailpoint PUBLIC "sailpoint.dtd" "sailpoint.dtd">
+<sailpoint>
+<Rule   language="beanshell"  
+            name="StandAlone Cleanup Native Change Apps" 
+            type="BuildMap">            
+  <Description>Find Applications that have Native Change Detection enabled.</Description>
+  <Signature returnType="Map">
+    <Inputs>
+      <Argument name="log">
+        <Description>
+          The log object associated with the SailPointContext.
+        </Description>
+      </Argument>
+      <Argument name="context">
+        <Description>
+          A sailpoint.api.SailPointContext object that can be used to query the database if necessary.
+        </Description>
+      </Argument>
+    </Inputs>
+  </Signature>
+  <Source>// Library inclusions for BeanShell
+import java.util.*;
+import java.lang.*;
+import java.text.*;
+
+import java.io.BufferedReader;
+import java.io.FileReader;
+import java.io.IOException;
+
+import sailpoint.api.*;
+import sailpoint.object.*;
+
+// Build a string of data to return to the debug page.
+StringBuilder sb = new StringBuilder();
+
+QueryOptions appQo = new QueryOptions();
+appQo.addOrdering("name", true);
+
+Iterator appIt = context.search(Application.class, appQo);
+
+while (appIt.hasNext()) { 
+
+	Application app = appIt.next();
+	
+	sb.append("Examining App: " + app.getName() + " for NCD cleanup. \n");
+	System.out.println("Examining App: " + app.getName() + " for NCD cleanup. \n");
+		
+	if (app.isNativeChangeDetectionEnabled()) {
+		// This app has NCD Enabled:
+		sb.append(app.getName() + " - nativeChangeDetectionEnabled: true");
+		System.out.println(app.getName() + " - nativeChangeDetectionEnabled: true");
+	} 
+	
+	// Toggle this to force all the apps to be disabled.
+	boolean forceDisabled = false;
+	if (forceDisabled) {
+	
+	 	app.setNativeChangeDetectionEnabled(false);
+	 	
+		context.saveObject(app);
+		context.commitTransaction();
+		
+		sb.append(app.getName() + " - nativeChangeDetectionEnabled set to FALSE");
+		System.out.println(app.getName() + " - nativeChangeDetectionEnabled set to FALSE");
+	}
+		
+	context.decache();	
+
+}
+
+sb.append("NativeChange cleanup processing completed. \n");
+
+return sb.toString();
+</Source>
+</Rule>
+</sailpoint>

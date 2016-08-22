@@ -1,0 +1,82 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<!DOCTYPE sailpoint PUBLIC "sailpoint.dtd" "sailpoint.dtd">
+<sailpoint>
+<Rule   language="beanshell"  
+            name="StandAlone Cleanup Native Change Detections" 
+            type="BuildMap">            
+  <Description>Cleanup some native change detection objects on Identity Cubes.</Description>
+  <Signature returnType="Map">
+    <Inputs>
+      <Argument name="log">
+        <Description>
+          The log object associated with the SailPointContext.
+        </Description>
+      </Argument>
+      <Argument name="context">
+        <Description>
+          A sailpoint.api.SailPointContext object that can be used to query the database if necessary.
+        </Description>
+      </Argument>
+    </Inputs>
+  </Signature>
+  <Source>// Library inclusions for BeanShell
+import java.util.*;
+import java.lang.*;
+import java.text.*;
+
+import java.io.BufferedReader;
+import java.io.FileReader;
+import java.io.IOException;
+
+import sailpoint.api.*;
+import sailpoint.object.*;
+
+// Build a string of data to return to the debug page.
+StringBuilder sb = new StringBuilder();
+
+QueryOptions idQo = new QueryOptions();
+
+// Uncomment this line to work for ever ID:
+// idQo.addFilter(Filter.like("name", "DWILSO7", Filter.MatchMode.START));
+idQo.addOrdering("name", true);
+
+Iterator idIt = context.search(Identity.class, idQo);
+
+while (idIt.hasNext()) { 
+
+	Identity id = idIt.next();
+	
+	sb.append("Examining ID: " + id.getName() + " for NCD cleanup. \n");
+	
+	Map triggerSnapshots = (Map) id.getAttribute("triggerSnapshots");
+	if (null == triggerSnapshots) {
+		// No snapshots on this cube.
+		// Skip to the next step of the while loop.
+		continue;
+	}
+	
+	List ncList = (List) triggerSnapshots.get("NativeChange");
+	if ((null == ncList) || (ncList.size() == 0)) {
+		// No NativeChangeDetection on this cube.
+		// Skip to the next step of the while loop.
+		continue;	
+	}
+	
+	ncList.clear();
+	triggerSnapshots.put("triggerSnapshots", ncList);
+	
+	sb.append("Cleaned up ID: " + id.getName() + " \n");
+
+	context.saveObject(id);
+	context.commitTransaction();	
+	
+	context.decache();	
+
+}
+
+sb.append("NativeChange cleanup processing completed. \n");
+
+return sb.toString();
+</Source>
+</Rule>
+</sailpoint>
