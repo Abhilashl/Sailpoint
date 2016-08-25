@@ -1,0 +1,25 @@
+/*
+    Rule:  aci_IdentityType
+    
+    Author:  Steve Nuffer
+	
+    Date:  August 24, 2016
+    Version:  1.0
+
+*/
+import org.apache.log4j.Logger;
+import sailpoint.object.*;
+import sailpoint.tools.Util;
+
+// Declare a logger class
+Logger logger = Logger.getLogger("com.aci.rule.aci_IdentityType");
+logger.debug("aci_identityType");
+
+String identitytName  = identity.getDisplayName();
+logger.debug("  Name=" + identitytName);
+logger.debug("  Auth?=" + identity.isCorrelated() );
+
+if ( identity.isCorrelated() )
+    return "Personal";
+else
+    return "Orphan";
