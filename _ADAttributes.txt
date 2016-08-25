@@ -1,0 +1,194 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<!DOCTYPE Rule PUBLIC "sailpoint.dtd" "sailpoint.dtd">
+<Rule created="1461195417839" id="8a85948553d84d4501543608a8ef0047" language="beanshell" modified="1470429105742" name="_ADAttributes">
+  <Description>This rule can be executed in the console or in debug mode to return information </Description>
+  <Signature returnType="String">
+    <Inputs>
+      <Argument name="log">
+        <Description>
+          The log object associated with the SailPointContext.
+        </Description>
+      </Argument>
+      <Argument name="context">
+        <Description>
+          A sailpoint.api.SailPointContext object that can be used to query the database if necessary.
+        </Description>
+      </Argument>
+      <Argument name="environment" type="Map">
+        <Description>
+           Arguments passed to the aggregation or refresh task.
+        </Description>
+      </Argument>
+      <Argument name="identity">
+        <Description>
+           The Identity object that represents the user
+           that is being aggregated.
+        </Description>
+      </Argument>
+      <Argument name="attributeDefinition">
+        <Description>
+           The AttributeDefinition object for this attribute.
+        </Description>
+      </Argument>
+      <Argument name="link">
+        <Description>
+           The Link object from the Identity, if this is an application
+           mapping rule.  For global mapping rules this will be void.
+        </Description>
+      </Argument>
+      <Argument name="attributeSource">
+        <Description>
+          The AttributeSource object.
+        </Description>
+      </Argument>
+      <Argument name="oldValue">
+        <Description>
+          The original value of the application account attribute.
+        </Description>
+      </Argument>
+    </Inputs>
+    <Returns>
+      <Argument name="attributeValue">
+        <Description>
+          The value of the attribute that should be populated.
+          The rule should return this value.
+        </Description>
+      </Argument>
+    </Returns>
+  </Signature>
+  <Source>
+
+/*
+        Rule:  _ADAttributes
+        Author:  Steve Nuffer
+	
+	
+	Version: 1.0
+
+*/
+import org.apache.log4j.Logger; 
+import sailpoint.object.*;
+import org.apache.jmeter.services.FileServer;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import sailpoint.tools.Util;
+
+//String appName = "PRD Active Directory am.tsacorp.com";
+String appName = "PRD Active Directory am.tsacorp.com";
+  
+String runningASUser = System.getProperty("user.name");
+
+Logger log = Logger.getLogger("com.aci.rule.aci_SourceMapping");
+String csvFileName = "\\\\cov6nas02\\slpprdxfr\\sailpoint\\_ADAttributes." + runningASUser + ".csv";
+
+DateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd");
+
+// Create the File handle
+File csvFile = new File(csvFileName);
+try
+{    
+    fileWriter = new PrintWriter( new FileOutputStream( csvFile ));
+}
+catch ( Exception e )
+{
+    // User doesn't have permission to write    
+    return "Execute from Console OR the file is open";
+}
+
+System.out.println("****************  " + appName + "  ****************\n");
+Application app = context.getObjectByName(Application.class, appName);
+
+if (null == app) {  
+   log.error("Could not find application named:" + appName);  
+   return;  
+} 
+
+Filter qoFilter = Filter.eq("application", app);
+
+QueryOptions qo = new QueryOptions();  
+qo.addFilter(qoFilter);
+//qo.setOrderBy("accountName");  
+  
+//Print to a file
+//  Printer header to CSV file
+fileWriter.println("identityCreated!identitytName!identityFname!identityKnownAs!identityLname!acctDisplayName!acctSamName!idendityPersonID!acctDistName!acctUPN!acctMail!acctPhone!acctType!acctFlags");	
+
+Iterator it = context.search(Link.class, qo);  
+while (it.hasNext()) {  
+    Link link = (Link) it.next();  
+
+    String identitytName  = "";
+    String idendityPersonID = "";
+    String identityFname = "";
+    String identityKnownAs = "";
+    String identityLname = "";
+    Date identityCreated = null;
+    String acctSamName = "";
+    String acctEmpID = "";
+    String acctUPN = "";
+    String acctMail = "";
+    String acctPhone = "";
+    String acctType = "";
+    String acctFlags = "";
+    String acctDistName = "";
+    String acctDisplayName = "";
+
+	// Get Identity attributes
+	Identity identity = link.getIdentity();
+    try { identitytName  = identity.getDisplayName(); } catch ( Exception e ) {}
+    try { idendityPersonID = identity.getStringAttribute("personId"); } catch ( Exception e ) {}
+
+    try { identityFname = identity.getFirstname();  } catch ( Exception e ) {}
+    try { identityKnownAs = identity.getStringAttribute("KNOWN_AS");  } catch ( Exception e ) {} 
+    try { identityLname = identity.getLastname(); } catch ( Exception e ) {}
+    try { identityCreated = identity.getCreated(); } catch ( Exception e ) {}
+
+	// Get application attributes
+    Attributes attributes = link.getAttributes();
+    try {  acctSamName = attributes.getString("sAMAccountName"); } catch ( Exception e ) {}
+    try { acctEmpID = attributes.getString("employeeID"); } catch ( Exception e ) {}
+    try { acctUPN = attributes.getString("userPrincipalName"); } catch ( Exception e ) {}
+    try { acctMail = attributes.getString("mail"); } catch ( Exception e ) {}
+    try { acctPhone = attributes.getString("telephoneNumber"); } catch ( Exception e ) {}
+    try { acctType = attributes.getString("accountType"); } catch ( Exception e ) {}
+    try { acctFlags = attributes.getString("accountFlags"); } catch ( Exception e ) {}
+    try { acctDistName = attributes.getString("distinguishedName"); } catch ( Exception e ) {}
+    try { acctDisplayName = attributes.getString("displayName");     } catch ( Exception e ) {}
+    
+    if ( !Util.isNotNullOrEmpty(identityLname) ) identityLname = "None";
+    if ( !Util.isNotNullOrEmpty(identityFname) ) identityFname = "None";   
+    if ( !Util.isNotNullOrEmpty(identityKnownAs) ) identityKnownAs = "None";
+    if ( !Util.isNotNullOrEmpty(identitytName) ) identitytName = "None";
+    if ( !Util.isNotNullOrEmpty(idendityPersonID) ) idendityPersonID = "None";
+    if ( !Util.isNotNullOrEmpty(acctSamName) ) acctSamName = "None";
+    if ( !Util.isNotNullOrEmpty(acctUPN) ) acctUPN = "None";              
+    if ( !Util.isNotNullOrEmpty(acctMail) ) acctMail = "None";
+    if ( !Util.isNotNullOrEmpty(acctPhone) ) acctPhone = "None";
+    if ( !Util.isNotNullOrEmpty(acctType) ) acctType = "None";
+    if ( !Util.isNotNullOrEmpty(acctFlags) ) acctFlags = "None";
+    if ( !Util.isNotNullOrEmpty(acctDistName) ) acctDistName = "None";
+    if ( !Util.isNotNullOrEmpty(acctDisplayName) ) acctDisplayName = "None";
+
+System.out.println("**** 6 ****");
+	
+	//Print row to a file   
+    try {
+        //System.out.println("****** " + dateFormat.format(identityCreated) + "!" + identitytName);
+        fileWriter.println(dateFormat.format(identityCreated) + "!" + identitytName + "!" + identityFname + "!" + identityKnownAs + "!" + identityLname + "!" + acctDisplayName + "!" + acctSamName + "!" + idendityPersonID + "!" + acctDistName + "!" + acctUPN + "!" + acctMail + "!" + acctPhone + "!" + acctType + "!" + acctFlags);	
+        System.out.println(dateFormat.format(identityCreated) + "!" + identitytName + "!" + identityFname + "!" + identityKnownAs + "!" + identityLname + "!" + acctDisplayName + "!" + acctSamName + "!" + idendityPersonID + "!" + acctDistName + "!" + acctUPN + "!" + acctMail + "!" + acctPhone + "!" + acctType + "!" + acctFlags);	
+        ;
+    } catch(Exception e) {
+        System.out.println("++++ " + identitytName);
+    }
+}  
+ 
+// Close File handles
+fileWriter.flush();
+fileWriter.close();
+
+sailpoint.tools.Util.flushIterator(it); 
+
+return "Contents saved to " + csvFileName + "    ***  Delimeter is !  ***";
+
+</Source>
+</Rule>

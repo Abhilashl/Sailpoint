@@ -1,0 +1,126 @@
+/*
+		Rule:  _HRMSAttributes
+  	Author:  Steve Nuffer
+	
+    Date:  August 17, 2016	
+	  Version: 1.0
+
+*/
+import org.apache.log4j.Logger; 
+import sailpoint.object.*;
+import org.apache.jmeter.services.FileServer;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+
+String appName = "PRD Fusion HCM";
+String runningASUser = System.getProperty("user.name");
+DateFormat dateEffectiveFormat = new SimpleDateFormat("yyyyMMdd.HHmmss.S");
+
+Logger log = Logger.getLogger("com.aci.rule.aci_SourceMapping");
+String csvFileName = "\\\\cov6nas02\\slpprdxfr\\sailpoint\\_FusionAttributes." + runningASUser + ".csv";
+
+// Create the File handle
+File csvFile = new File(csvFileName);
+try
+{    
+    fileWriter = new PrintWriter( new FileOutputStream( csvFile ));
+}
+catch ( Exception e )
+{
+    // User doesn't have permission to write    
+    return "Execute from Console OR the file is open";
+}
+
+System.out.println("****************  " + appName + "  ****************\n");
+Application app = context.getObjectByName(Application.class, appName);
+
+if (null == app) {  
+   log.error("Could not find application named:" + appName);  
+   return;  
+} 
+
+Filter qoFilter = Filter.eq("application", app);
+
+QueryOptions qo = new QueryOptions();  
+qo.addFilter(qoFilter);
+//qo.setOrderBy("accountName");  
+  
+//Print to a file
+//  Printer header to CSV file
+fileWriter.println("PERSON_ID!USERNAME!LAST_NAME!FIRST_NAME!MIDDLE_NAMES!KNOWN_AS!EMPLOYEE_NUMBER!WORK_TELEPHONE!EMPLOYEE_EMAIL!DATE_OF_BIRTH!BUS_GROUP_ID!DEPT_NAME!ORGANIZATION_ID!DEFAULT_ACCT_DEPT!SUPERVISOR_ID!EMP_START_DATE!PERSON_TYPE!GENDER!ORACLE_USER_NAME!NETWORK_ID!LOCATION!LOCATION_ID!ADDRESS_LINE_1!TOWN_OR_CITY!REGION_2!POSTAL_CODE!COUNTRY!ASSIGNMENT_ID!EFFECTIVE_START_DATE!EFFECTIVE_END_DATE!ACTUAL_TERMINATION_DATE!LEAVING_REASON!MEANING!CURRENT_EMPLOYEE_FLAG!REGIONAL_TITLE!RANK!INACTIVE!LAST_REFRESH");	
+
+Iterator it = context.search(Link.class, qo);  
+while (it.hasNext()) {  
+    Link link = (Link) it.next();  
+
+try {	
+	// Get Identity attributes
+	Identity identity = link.getIdentity();
+	String identitytName  = identity.getDisplayName();
+    String idendityPersonID = identity.getStringAttribute("personId");
+    String identityFname = identity.getFirstname();
+    String identityLname = identity.getLastname();
+    String identityKnownAs = identity.getStringAttribute("KNOWN_AS");
+    String lastRefresh = dateEffectiveFormat.format(link.getLastRefresh());
+		
+	// Get application attributes
+    Attributes attributes = link.getAttributes();
+    String acctPERSON_ID = attributes.getString("PERSON_ID");
+    String acctUSERNAME = attributes.getString("USERNAME");
+    String acctLAST_NAME = attributes.getString("LAST_NAME");
+    String acctFIRST_NAME = attributes.getString("FIRST_NAME");
+    String acctMIDDLE_NAMES = attributes.getString("MIDDLE_NAMES");
+    String acctKNOWN_AS = attributes.getString("KNOWN_AS");
+    String acctEMPLOYEE_NUMBER = attributes.getString("EMPLOYEE_NUMBER");
+    String acctWORK_TELEPHONE = attributes.getString("WORK_TELEPHONE");
+    String acctEMPLOYEE_EMAIL = attributes.getString("EMPLOYEE_EMAIL");
+    String acctDATE_OF_BIRTH = attributes.getString("DATE_OF_BIRTH");
+    String acctBUS_GROUP_ID = attributes.getString("BUS_GROUP_ID");
+    String acctDEPT_NAME = attributes.getString("DEPT_NAME");
+    String acctORGANIZATION_ID = attributes.getString("ORGANIZATION_ID");
+    String acctDEFAULT_ACCT_DEPT = attributes.getString("DEFAULT_ACCT_DEPT");
+    String acctSUPERVISOR_ID = attributes.getString("SUPERVISOR_ID");
+    String acctEMP_START_DATE = attributes.getString("EMP_START_DATE");
+    String acctPERSON_TYPE = attributes.getString("PERSON_TYPE");
+    String acctGENDER = attributes.getString("GENDER");
+    String acctORACLE_USER_NAME = attributes.getString("ORACLE_USER_NAME");
+    String acctNETWORK_ID = attributes.getString("NETWORK_ID");
+    String acctLOCATION = attributes.getString("LOCATION");
+    String acctLOCATION_ID = attributes.getString("LOCATION_ID");
+    String acctADDRESS_LINE_1 = attributes.getString("ADDRESS_LINE_1");
+    String acctTOWN_OR_CITY = attributes.getString("TOWN_OR_CITY");
+    String acctREGION_2 = attributes.getString("REGION_2");
+    String acctPOSTAL_CODE = attributes.getString("POSTAL_CODE");
+    String acctCOUNTRY = attributes.getString("COUNTRY");
+    String acctASSIGNMENT_ID = attributes.getString("ASSIGNMENT_ID");
+    String acctEFFECTIVE_START_DATE = attributes.getString("EFFECTIVE_START_DATE");
+    String acctEFFECTIVE_END_DATE = attributes.getString("EFFECTIVE_END_DATE");
+    String acctACTUAL_TERMINATION_DATE = attributes.getString("ACTUAL_TERMINATION_DATE");
+    String acctLEAVING_REASON = attributes.getString("LEAVING_REASON");
+    String acctMEANING = attributes.getString("MEANING");
+    String acctCURRENT_EMPLOYEE_FLAG = attributes.getString("CURRENT_EMPLOYEE_FLAG");
+    String acctREGIONAL_TITLE = attributes.getString("REGIONAL_TITLE");
+    String acctRANK = attributes.getString("RANK");
+    String acctInactive = attributes.getString("inactive");
+
+	//Print row to a file   
+	fileWriter.println(acctPERSON_ID + "!" + acctUSERNAME + "!" + acctLAST_NAME + "!" + acctFIRST_NAME + "!" + acctMIDDLE_NAMES + "!" + acctKNOWN_AS + "!" + acctEMPLOYEE_NUMBER + "!" + acctWORK_TELEPHONE + "!" + acctEMPLOYEE_EMAIL + "!" + acctDATE_OF_BIRTH + "!" + acctBUS_GROUP_ID + "!" + acctDEPT_NAME + "!" + acctORGANIZATION_ID + "!" + acctDEFAULT_ACCT_DEPT + "!" + acctSUPERVISOR_ID + "!" + acctEMP_START_DATE + "!" + acctPERSON_TYPE + "!" + acctGENDER + "!" + acctORACLE_USER_NAME + "!" + acctNETWORK_ID + "!" + acctLOCATION + "!" + acctLOCATION_ID + "!" + acctADDRESS_LINE_1 + "!" + acctTOWN_OR_CITY + "!" + acctREGION_2 + "!" + acctPOSTAL_CODE + "!" + acctCOUNTRY + "!" + acctASSIGNMENT_ID + "!" + acctEFFECTIVE_START_DATE + "!" + acctEFFECTIVE_END_DATE + "!" + acctACTUAL_TERMINATION_DATE + "!" + acctLEAVING_REASON + "!" + acctMEANING + "!" + acctCURRENT_EMPLOYEE_FLAG + "!" + acctREGIONAL_TITLE + "!" + acctRANK + "!" + acctInactive + "!" + lastRefresh);	
+    
+   } catch(Exception e) {
+        System.out.println("ERROR");
+    }
+    // Print to stdout or console
+    //String output = String.format("%-20s  %-40s  %-15s", new Object[] {acctSamName,acctMail,acctType});
+	//System.out.println(output);
+	
+	//Print row to a file   
+	//fileWriter.println(acctPERSON_ID + "!" + acctUSERNAME + "!" + acctLAST_NAME + "!" + acctFIRST_NAME + "!" + acctMIDDLE_NAMES + "!" + acctKNOWN_AS + "!" + acctEMPLOYEE_NUMBER + "!" + acctWORK_TELEPHONE + "!" + acctEMPLOYEE_EMAIL + "!" + acctDATE_OF_BIRTH + "!" + acctBUS_GROUP_ID + "!" + acctDEPT_NAME + "!" + acctORGANIZATION_ID + "!" + acctDEFAULT_ACCT_DEPT + "!" + acctSUPERVISOR_ID + "!" + acctEMP_START_DATE + "!" + acctPERSON_TYPE + "!" + acctGENDER + "!" + acctORACLE_USER_NAME + "!" + acctNETWORK_ID + "!" + acctLOCATION + "!" + acctLOCATION_ID + "!" + acctADDRESS_LINE_1 + "!" + acctTOWN_OR_CITY + "!" + acctREGION_2 + "!" + acctPOSTAL_CODE + "!" + acctCOUNTRY + "!" + acctASSIGNMENT_ID + "!" + acctEFFECTIVE_START_DATE + "!" + acctEFFECTIVE_END_DATE + "!" + acctACTUAL_TERMINATION_DATE + "!" + acctLEAVING_REASON + "!" + acctMEANING + "!" + acctCURRENT_EMPLOYEE_FLAG + "!" + acctREGIONAL_TITLE + "!" + acctRANK + "!" + acctInactive );	
+ }  
+ 
+// Close File handles
+fileWriter.flush();
+fileWriter.close();
+
+sailpoint.tools.Util.flushIterator(it); 
+
+return "Contents saved to " + csvFileName + "    ***  Delimeter is !  ***";
