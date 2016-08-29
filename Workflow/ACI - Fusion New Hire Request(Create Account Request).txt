@@ -317,8 +317,8 @@ switch (identityPerType.toLowerCase()) {
                     logger.debug("MgrApp=" + mgrApp + "  mgrAcctType=" + mgrAcctType);
                     
                     // Check for the correct Link and if this is their personal-primary account
-                    //if ( mgrApp.equalsIgnoreCase(appSForce) && "personal-primary".equalsIgnoreCase(mgrAcctType))  {
-                    if ( mgrApp.equalsIgnoreCase(appSForce) && mgrAcctType.toLowerCase().contains("personal"))  {
+                    if ( mgrApp.equalsIgnoreCase(appSForce) && "personal-primary".equalsIgnoreCase(mgrAcctType))  {
+                    //if ( mgrApp.equalsIgnoreCase(appSForce) && mgrAcctType.toLowerCase().contains("personal"))  {
                         // Use Email from Sforce because of ".full"
                         logger.debug("Found the correct one");
                         mgrEmail = mgrLink.getAttribute("email");
