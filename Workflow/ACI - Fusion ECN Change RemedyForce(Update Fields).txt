@@ -3,7 +3,7 @@
     Step:  Update Fields
     
     Date:  August 31, 2016
-    Version:  1.11
+    Version:  1.12
 */
 import org.apache.log4j.Logger;
 import sailpoint.object.*;
@@ -83,7 +83,7 @@ if(event != null){
     //Mgr
     if ( ! oldMgrPersonID.equalsIgnoreCase(newMgrPersonID)){
         Map changesMap = new HashMap();
-        changesMap.put("description", "Mgr");
+        changesMap.put("description", "Manager");
         changesMap.put("oldValue", oldMgr);
         changesMap.put("newValue", newMgr);
         changeList.add(changesMap); 

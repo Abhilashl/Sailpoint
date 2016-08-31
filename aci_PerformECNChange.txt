@@ -2,8 +2,8 @@
     Rule:  aci_PerformECNChange
     Author:  Steve Nuffer
 	
-    Date:  August 23, 2016	
-	Version: 1.1
+    Date:  August 31, 2016	
+	Version: 1.21
 
 */
 import org.apache.log4j.Logger; 
@@ -18,7 +18,14 @@ boolean performLCM = false;
 // The instanceof operator returns false if the object is null or void
 // as well as if it is a different object type.
 if (!(previousIdentity instanceof Identity) || !(newIdentity instanceof Identity)) {
+    // New Hire or Error on newIdentity
     logger.debug("    Identity Null");
+    return false;
+}
+
+// Is this a new Rehire
+if ( previousIdentity.isInactive() && ! newIdentity.isInactive() ) {
+    // Rehire
     return false;
 }
 
@@ -71,7 +78,7 @@ if ( !Util.isNotNullOrEmpty(newManagerPersonID ) ) newManagerPersonID = "";
 if ( ! oldLocation.equalsIgnoreCase(newLocation) ) performLCM = true;
 if ( ! oldDeptName.equalsIgnoreCase(newDeptName) ) performLCM = true;
 if ( ! oldemployeeTitle.equalsIgnoreCase(newemployeeTitle) ) performLCM = true;
-if ( ! oldManagerPersonID .equalsIgnoreCase(newManagerPersonID ) ) performLCM = true;
+if ( ! oldManagerPersonID.equalsIgnoreCase(newManagerPersonID) ) performLCM = true;
 
 logger.debug ("    performLCM=" + performLCM);
 
