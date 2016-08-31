@@ -13,6 +13,9 @@
 #if ($company) 
     Company:     $company
 #end        
+&lt;br>
+    Manager:        $managerName
+    Manager Email:  $managerEmail
 
     Network ID:  $networkId
     Email:       $employeeEmail

@@ -3,7 +3,7 @@
     Step:  Update Fields
     
     Date:  August 31, 2016
-    Version:  1.1
+    Version:  1.11
 */
 import org.apache.log4j.Logger;
 import sailpoint.object.*;
@@ -14,7 +14,7 @@ import java.text.SimpleDateFormat;
 Logger logger = Logger.getLogger("com.aci.wf.change");
 logger.debug("ACI - Fusion ECN Change RemedyForce(Update Fields)");
 
-DateFormat dateEffectiveFormat = new SimpleDateFormat("dd-mmm-yyyy");
+DateFormat dateEffectiveFormat = new SimpleDateFormat("dd-MMM-yyyy");
 Date currentDate = new Date();
 String effectiveDate = dateEffectiveFormat.format(currentDate);
 
@@ -40,16 +40,16 @@ if(event != null){
         oldLocation = oldIdentity.getAttribute("location");
         oldDeptName = oldIdentity.getAttribute("DEPT_NAME");
         oldEmployeeTitle = oldIdentity.getAttribute("employeeTitle");
-        oldMgr = oldIdentity.getMgr().getDisplayName();
-        oldMgrPersonID = oldIdentity.getMgr().getAttribute("personId");   
+        oldMgr = oldIdentity.getManager().getDisplayName();
+        oldMgrPersonID = oldIdentity.getManager().getAttribute("personId");   
     } 
 
     if (newIdentity !=null) {
         newLocation = newIdentity.getAttribute("location");
         newDeptName = newIdentity.getAttribute("DEPT_NAME");
         newEmployeeTitle = newIdentity.getAttribute("employeeTitle");
-        newMgr = newIdentity.getMgr().getDisplayName();
-        newMgrPersonID = newIdentity.getMgr().getAttribute("personId");
+        newMgr = newIdentity.getManager().getDisplayName();
+        newMgrPersonID = newIdentity.getManager().getAttribute("personId");
     }
 
     //Location
@@ -97,8 +97,8 @@ Identity identityObj = context.getObjectByName(Identity.class, identityName);
 
 String employeeEmail = identityObj.getEmail();
 String networkId = identityObj.getAttribute("networkId");
-String mgrEmail  = identityObj.getMgr().getEmail();
-String mgrName  = identityObj.getMgr().getDisplayName();
+String managerEmail  = identityObj.getManager().getEmail();
+String managerName  = identityObj.getManager().getDisplayName();
 String personType = identityObj.getAttribute("personType");
 String personId = identityObj.getAttribute("personId");
 String company = identityObj.getAttribute("company");
@@ -110,16 +110,16 @@ String lastname = identityObj.getLastname();
 if ( !Util.isNotNullOrEmpty(networkId) ) networkId = "";
 if ( !Util.isNotNullOrEmpty(employeeEmail ) ) employeeEmail = "";
 if ( !Util.isNotNullOrEmpty(company) ) company = "";
-if ( !Util.isNotNullOrEmpty(mgrEmail) ) mgrEmail = "";
-if ( !Util.isNotNullOrEmpty(mgrName) ) mgrName = "";
+if ( !Util.isNotNullOrEmpty(managerEmail) ) managerEmail = "";
+if ( !Util.isNotNullOrEmpty(managerName) ) managerName = "";
 if ( !Util.isNotNullOrEmpty(location) ) location = "";
 
 
 //  Update WFlow variables
 workflow.put("employeeEmail",employeeEmail);
 workflow.put("networkId",networkId);
-workflow.put("mgrEmail",mgrEmail);
-workflow.put("mgrName",mgrName);
+workflow.put("managerEmail",managerEmail);
+workflow.put("managerName",managerName);
 workflow.put("personType",personType);
 workflow.put("firstname",firstname);
 workflow.put("lastname",lastname);        
