@@ -1,0 +1,129 @@
+/*
+    Workflow:  ACI - Fusion ECN Change RemedyForce
+    Step:  Update Fields
+    
+    Date:  August 31, 2016
+    Version:  1.1
+*/
+import org.apache.log4j.Logger;
+import sailpoint.object.*;
+import sailpoint.aci.util.ACIUtil;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+
+Logger logger = Logger.getLogger("com.aci.wf.change");
+logger.debug("ACI - Fusion ECN Change RemedyForce(Update Fields)");
+
+DateFormat dateEffectiveFormat = new SimpleDateFormat("dd-mmm-yyyy");
+Date currentDate = new Date();
+String effectiveDate = dateEffectiveFormat.format(currentDate);
+
+List changeList = new ArrayList();
+String oldLocation ="";
+String newLocation ="";
+String oldDeptName ="";
+String newDeptName ="";
+String oldEmployeeTitle ="";
+String newEmployeeTitle ="";
+String oldMgr ="";
+String newMgr ="";
+String oldMgrPersonID ="";
+String newMgrPersonID ="";
+
+// Is event data available?
+if(event != null){  
+    logger.debug("    event found for " + event.getIdentityName()); 
+    Identity oldIdentity = event.getOldObject();  
+    Identity newIdentity = event.getNewObject();
+
+    if (oldIdentity !=null) {
+        oldLocation = oldIdentity.getAttribute("location");
+        oldDeptName = oldIdentity.getAttribute("DEPT_NAME");
+        oldEmployeeTitle = oldIdentity.getAttribute("employeeTitle");
+        oldMgr = oldIdentity.getMgr().getDisplayName();
+        oldMgrPersonID = oldIdentity.getMgr().getAttribute("personId");   
+    } 
+
+    if (newIdentity !=null) {
+        newLocation = newIdentity.getAttribute("location");
+        newDeptName = newIdentity.getAttribute("DEPT_NAME");
+        newEmployeeTitle = newIdentity.getAttribute("employeeTitle");
+        newMgr = newIdentity.getMgr().getDisplayName();
+        newMgrPersonID = newIdentity.getMgr().getAttribute("personId");
+    }
+
+    //Location
+    if ( ! oldLocation.equalsIgnoreCase(newLocation)){
+        Map changesMap = new HashMap();
+        changesMap.put("description", "Location");
+        changesMap.put("oldValue", oldLocation);
+        changesMap.put("newValue", newLocation);
+        changeList.add(changesMap); 
+    }
+
+    
+    //Department
+    if ( ! oldDeptName.equalsIgnoreCase(newDeptName)){
+        Map changesMap = new HashMap();
+        changesMap.put("description", "Department");
+        changesMap.put("oldValue", oldDeptName);
+        changesMap.put("newValue", newDeptName);
+        changeList.add(changesMap); 
+    }
+
+    //Title
+    if ( ! oldEmployeeTitle.equalsIgnoreCase(newEmployeeTitle)){
+        Map changesMap = new HashMap();
+        changesMap.put("description", "Title");
+        changesMap.put("oldValue", oldEmployeeTitle);
+        changesMap.put("newValue", newEmployeeTitle);
+        changeList.add(changesMap); 
+    }
+
+    //Mgr
+    if ( ! oldMgrPersonID.equalsIgnoreCase(newMgrPersonID)){
+        Map changesMap = new HashMap();
+        changesMap.put("description", "Mgr");
+        changesMap.put("oldValue", oldMgr);
+        changesMap.put("newValue", newMgr);
+        changeList.add(changesMap); 
+    }
+
+    // Add the changes to the workflow
+    workflow.put("changeList", changeList);   
+}
+// 
+Identity identityObj = context.getObjectByName(Identity.class, identityName);
+
+String employeeEmail = identityObj.getEmail();
+String networkId = identityObj.getAttribute("networkId");
+String mgrEmail  = identityObj.getMgr().getEmail();
+String mgrName  = identityObj.getMgr().getDisplayName();
+String personType = identityObj.getAttribute("personType");
+String personId = identityObj.getAttribute("personId");
+String company = identityObj.getAttribute("company");
+String location = identityObj.getAttribute("location");
+String firstname = identityObj.getFirstname();
+String lastname = identityObj.getLastname();
+
+//Check if Null or empty
+if ( !Util.isNotNullOrEmpty(networkId) ) networkId = "";
+if ( !Util.isNotNullOrEmpty(employeeEmail ) ) employeeEmail = "";
+if ( !Util.isNotNullOrEmpty(company) ) company = "";
+if ( !Util.isNotNullOrEmpty(mgrEmail) ) mgrEmail = "";
+if ( !Util.isNotNullOrEmpty(mgrName) ) mgrName = "";
+if ( !Util.isNotNullOrEmpty(location) ) location = "";
+
+
+//  Update WFlow variables
+workflow.put("employeeEmail",employeeEmail);
+workflow.put("networkId",networkId);
+workflow.put("mgrEmail",mgrEmail);
+workflow.put("mgrName",mgrName);
+workflow.put("personType",personType);
+workflow.put("firstname",firstname);
+workflow.put("lastname",lastname);        
+workflow.put("company",company);       
+workflow.put("personId",personId);
+workflow.put("location",location);
+workflow.put("effectiveDate",effectiveDate);

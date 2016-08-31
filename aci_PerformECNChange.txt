@@ -1,0 +1,78 @@
+/*
+    Rule:  aci_PerformECNChange
+    Author:  Steve Nuffer
+	
+    Date:  August 23, 2016	
+	Version: 1.1
+
+*/
+import org.apache.log4j.Logger; 
+import sailpoint.object.*;
+import sailpoint.tools.Util;
+
+Logger logger = Logger.getLogger("com.aci.rule.aci_PerformECNChange");
+logger.debug("aci_PerformECNChange");
+
+boolean performLCM = false;
+
+// The instanceof operator returns false if the object is null or void
+// as well as if it is a different object type.
+if (!(previousIdentity instanceof Identity) || !(newIdentity instanceof Identity)) {
+    logger.debug("    Identity Null");
+    return false;
+}
+
+// Identity is not from an authoritative source
+if ( ! newIdentity.isCorrelated() ) {
+    logger.debug("    Not authoritative identity");
+    return false;
+}
+
+String identityPersonID = newIdentity.getAttribute("personId");
+logger.debug("    PERSON_ID=" + identityPersonID);
+
+String oldLocation = previousIdentity.getAttribute("location");
+String newLocation = newIdentity.getAttribute("location");
+String oldDeptName = previousIdentity.getAttribute("DEPT_NAME");
+String newDeptName = newIdentity.getAttribute("DEPT_NAME");
+String oldemployeeTitle = previousIdentity.getAttribute("employeeTitle");
+String newemployeeTitle = newIdentity.getAttribute("employeeTitle");
+String oldManager = "";
+String newManager = "";
+String oldManagerPersonID = "";
+String newManagerPersonID = "";
+
+//Not all authoritative identities have managers
+try {
+    oldManager = previousIdentity.getManager().getDisplayName();
+    newManager = newIdentity.getManager().getDisplayName();
+    oldManagerPersonID = previousIdentity.getManager().getAttribute("personId");
+    newManagerPersonID = newIdentity.getManager().getAttribute("personId");
+} catch ( Exception e ) {
+    oldManager = "";
+    newManager = "";
+    oldManagerPersonID = "";
+    newManagerPersonID = "";
+} 
+
+// Check for Null or empty
+if ( !Util.isNotNullOrEmpty(oldLocation) ) oldLocation = "";
+if ( !Util.isNotNullOrEmpty(newLocation) ) newLocation = "";
+if ( !Util.isNotNullOrEmpty(oldDeptName) ) oldDeptName = "";
+if ( !Util.isNotNullOrEmpty(newDeptName) ) newDeptName = "";
+if ( !Util.isNotNullOrEmpty(oldemployeeTitle) ) oldemployeeTitle = "";
+if ( !Util.isNotNullOrEmpty(newemployeeTitle) ) newemployeeTitle = "";
+if ( !Util.isNotNullOrEmpty(oldManager) ) oldManager = "";
+if ( !Util.isNotNullOrEmpty(newManager) ) newManager = "";
+if ( !Util.isNotNullOrEmpty(oldManagerPersonID ) ) oldManagerPersonID = "";
+if ( !Util.isNotNullOrEmpty(newManagerPersonID ) ) newManagerPersonID = "";
+
+// Compare old and new values
+if ( ! oldLocation.equalsIgnoreCase(newLocation) ) performLCM = true;
+if ( ! oldDeptName.equalsIgnoreCase(newDeptName) ) performLCM = true;
+if ( ! oldemployeeTitle.equalsIgnoreCase(newemployeeTitle) ) performLCM = true;
+if ( ! oldManagerPersonID .equalsIgnoreCase(newManagerPersonID ) ) performLCM = true;
+
+logger.debug ("    performLCM=" + performLCM);
+
+return performLCM;
