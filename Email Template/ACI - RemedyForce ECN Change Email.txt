@@ -17,7 +17,7 @@
     Network ID:  $networkId
     Email:       $employeeEmail
 &lt;br>
-    ECN Effecitve Date: $effectiveDate
+    ECN Effective Date: $effectiveDate
     ECN Employee Type:  $personType
     ECN Location:       $location
 &lt;br>    
