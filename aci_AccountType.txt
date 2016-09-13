@@ -3,13 +3,13 @@
     
     Author:  Steve Nuffer
 	
-    Date:  July 13, 2016
-    Version:  1.5
+    Date:  August 10, 2016
+    Version:  1.6
 
 */
 import org.apache.log4j.Logger;
 import sailpoint.object.*;
-import sailpoint.tools.Util;
+import sailpoint.tools.Util; 
 
 // Declare a logger class
 Logger logger = Logger.getLogger("com.aci.rule.aci_AccountType");
@@ -19,6 +19,10 @@ Custom custom = context.getObjectByName(Custom.class,"accountTypeMap");
 String tmpAcctType = "Unknown";
 Application app = link.getApplication();
 String appConnectorType = app.getConnector();
+Identity identityObj = link.getIdentity();
+String identityEmail = identityObj.getEmail();
+boolean authIdentity = identityObj.isCorrelated();
+String identitytName  = identityObj.getDisplayName();
 
 // Based upon connector Type
 switch (appConnectorType) {
@@ -29,7 +33,6 @@ switch (appConnectorType) {
             String acctSamName = link.getAttribute("sAMAccountName");
             String acctDistinguishedName = link.getAttribute("distinguishedName");
             String acctMail = link.getAttribute("mail");
-            String acctEmpID = link.getAttribute("employeeID");
               
             if ( acctSamName != null && acctSamName != void && !(acctSamName.equals("")) ) {
 
@@ -49,30 +52,38 @@ switch (appConnectorType) {
 
                 //********************
                 // Check if Account Type = Personal-Primary OR Personal-Other
-                //if ( acctDistinguishedName.toLowerCase().contains("ou=useraccounts") ) {
-                //if ( acctDistinguishedName.toLowerCase().contains("ou=user") ) {
-                if ( Util.isNotNullOrEmpty(acctEmpID) ) {
-                    if ( null != acctMail ) 
+                if ( authIdentity ) {
+                    if ( null != acctMail ) {
                         tmpAcctType = "Personal-Primary";
-                    else 
+                    } else {
                         tmpAcctType = "Personal-Other";
+                    }
                 }
             }         
             break;
-         //**************************************************************************
-         //*****  Salesforce
+     //**************************************************************************
+     //*****  Salesforce
      case "sailpoint.connector.ForceConnector":
-            // Get the Active Directory's Attributes
+            // Get the applications native account
             String acctNativeIdentity = link.getNativeIdentity();
-            String identityEmail = link.getIdentity().getEmail();
-            
-            if ( Util.isNotNullOrEmpty(identityEmail) && acctNativeIdentity.equalsIgnoreCase( identityEmail ) )
-                tmpAcctType = "Personal-Primary";
-            else 
-                tmpAcctType = "Personal-Other";
-            break;
-            
-        } // switch end
+            String acctMail = link.getAttribute("Email");
 
-logger.debug("appConnectorType=" + appConnectorType + " acctSamName=" + acctSamName + " AcctType=" + tmpAcctType + " acctMail=" + acctMail );
+            //********************
+            // Check if Account Type = Personal-Primary OR Personal-Other
+            if ( authIdentity ) {
+                if ( null != acctMail ) {
+                    if ( Util.isNotNullOrEmpty(identityEmail) && acctNativeIdentity.equalsIgnoreCase( identityEmail ) ) {
+                        tmpAcctType = "Personal-Primary";
+                    }
+                    else {
+                        tmpAcctType = "Personal-Other";
+                    }
+                } else {
+                    tmpAcctType = "Personal-Other";   
+                }
+            }
+            break;            
+} // switch end
+
+logger.debug("appConnectorType=" + appConnectorType + "(" + identitytName + ") acctSamName=" + acctSamName + " identityEmail=" + identityEmail + " AcctType=" + tmpAcctType );
 return tmpAcctType;
