@@ -1,0 +1,111 @@
+/*
+        Rule:  _SFAttributes
+        Author:  Steve Nuffer
+	
+	
+				Version: 1.0
+*/
+  
+import org.apache.log4j.Logger; 
+import sailpoint.object.*;
+import org.apache.jmeter.services.FileServer;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import sailpoint.tools.Util;
+
+String appName = "PRD Salesforce";
+String runningASUser = System.getProperty("user.name");
+
+Logger log = Logger.getLogger("com.aci.rule.aci_SourceMapping");
+String csvFileName = "\\\\cov6nas02\\slpprdxfr\\sailpoint\\_SFAttributes." + runningASUser + ".csv";
+
+DateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd");
+
+// Create the File handle
+File csvFile = new File(csvFileName);
+try
+{    
+    fileWriter = new PrintWriter( new FileOutputStream( csvFile ));
+}
+catch ( Exception e )
+{
+    // User doesn't have permission to write    
+    return "Execute from Console OR the file is open";
+}
+
+System.out.println("****************  " + appName + "  ****************\n");
+Application app = context.getObjectByName(Application.class, appName);
+  
+if (null == app) {  
+   log.error("Could not find application named:" + appName);  
+   return;  
+}
+
+Filter qoFilter = Filter.eq("application", app);
+
+QueryOptions qo = new QueryOptions();  
+qo.addFilter(qoFilter);
+
+//Print to a file
+//  Printer header to CSV file
+fileWriter.println("identityCreated!identitytName!identityFname!identityEmail!identityLname!acctUserName!acctPersonId!acctMail!acctType");
+
+Iterator it = context.search(Link.class, qo);
+while (it.hasNext()) {  
+    Link link = (Link) it.next();
+
+    String identitytName  = "";
+    String idendityPersonID = "";
+    String identityFname = "";
+    String identityEmail = "";
+    String identityLname = "";
+    Date identityCreated = null;
+    
+    String acctUserName = "";
+    String acctMail = "";
+    String acctType = "";
+    String acctPersonId = "";
+
+	// Get Identity attributes
+	Identity identity = link.getIdentity();
+    try { identitytName  = identity.getDisplayName(); } catch ( Exception e ) {}
+    try { idendityPersonID = identity.getStringAttribute("personId"); } catch ( Exception e ) {}
+
+    try { identityFname = identity.getFirstname();  } catch ( Exception e ) {}
+    try { identityEmail = identity.getEmail();  } catch ( Exception e ) {} 
+    try { identityLname = identity.getLastname(); } catch ( Exception e ) {}
+    try { identityCreated = identity.getCreated(); } catch ( Exception e ) {}
+
+	// Get application attributes
+    Attributes attributes = link.getAttributes();
+    try { acctUserName = attributes.getString("Username"); } catch ( Exception e ) {}
+    try { acctPersonId = attributes.getString("Person_ID__c"); } catch ( Exception e ) {}
+    try { acctMail = attributes.getString("Email"); } catch ( Exception e ) {}
+    try { acctType = attributes.getString("accountType"); } catch ( Exception e ) {}
+    
+    if ( !Util.isNotNullOrEmpty(identityLname) ) identityLname = "None";
+    if ( !Util.isNotNullOrEmpty(identityFname) ) identityFname = "None";   
+    if ( !Util.isNotNullOrEmpty(identityEmail) ) identityEmail = "None";
+    if ( !Util.isNotNullOrEmpty(identitytName) ) identitytName = "None";
+    if ( !Util.isNotNullOrEmpty(idendityPersonID) ) idendityPersonID = "None";
+    if ( !Util.isNotNullOrEmpty(acctUserName) ) acctUserName = "None";
+    if ( !Util.isNotNullOrEmpty(acctPersonId) ) acctPersonId = "None";              
+    if ( !Util.isNotNullOrEmpty(acctMail) ) acctMail = "None";
+    if ( !Util.isNotNullOrEmpty(acctType) ) acctType = "None";
+
+	//Print row to a file   
+    try {
+        fileWriter.println(dateFormat.format(identityCreated) + "!" + identitytName + "!" + identityFname + "!" + identityEmail + "!" + identityLname + "!" + acctUserName + "!" + acctPersonId + "!" + acctMail + "!" + acctType);
+        //System.out.println(dateFormat.format(identityCreated) + "!" + identitytName + "!" + identityFname + "!" + identityEmail + "!" + identityLname + "!" + acctUserName + "!" + acctPersonId + "!" + acctMail + "!" + acctType);       
+    } catch(Exception e) {
+        System.out.println("++++ " + identitytName);
+    }
+}  
+
+// Close File handles
+fileWriter.flush();
+fileWriter.close();
+
+  sailpoint.tools.Util.flushIterator(it); 
+
+return "Contents saved to " + csvFileName + "    ***  Delimeter is !  ***";

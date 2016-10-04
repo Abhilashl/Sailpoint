@@ -1,0 +1,107 @@
+/*
+    Rule:  _IdentityAttributes
+    Author:  Steve Nuffer
+    
+    Date:  August 25, 2016	
+	Version: 1.2
+
+*/
+import org.apache.log4j.Logger; 
+import sailpoint.object.*;
+import org.apache.jmeter.services.FileServer;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import sailpoint.tools.Util;
+
+String runningASUser = System.getProperty("user.name");
+
+String csvFileName = "\\\\cov6nas02\\slpprdxfr\\sailpoint\\_IdentityAttributes." + runningASUser + ".csv";
+
+DateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd");
+
+// Create the File handle
+File csvFile = new File(csvFileName);
+try
+{    
+    fileWriter = new PrintWriter( new FileOutputStream( csvFile ));
+}
+catch ( Exception e )
+{
+    // User doesn't have permission to write    
+    return "Execute from Console OR the file is open";
+}
+
+System.out.println("****************  Identities  ****************\n");
+ 
+//Print to a file
+//  Printer header to CSV file
+fileWriter.println("identityCreated!identityAuth!idendityPersonID!identitytName!identitytUserName!identityFname!identityKnownAs!identityLname!identityEmail!identityNetworkId!enterpriseStartDate!employmentStartDate!enterpriseEndDate!PersonType!MgrPersonID!Location");
+
+QueryOptions qo = new QueryOptions();  
+Iterator it = context.search(Identity.class,qo);  
+
+while (it.hasNext()) {  
+    Identity identityObj = (Identity) it.next();  
+
+    String identitytName  = "";
+    String identitytUserName  = "";
+    String idendityPersonID = "";
+    String identityFname = "";
+    String identityKnownAs = "";
+    String identityLname = "";
+    Date identityCreated = null;
+    String identityEmail = "";
+    String identityNetworkId = "";
+    String identityAuth = "";
+    String identityStartDate= "";
+    String identityEndDate= "";
+  	String identityCurrStartDate = "";
+    String identityPersonType="";
+    String mgrPersonID = "";
+    String identityLoc = "";
+
+    
+	// Get Identity attributes
+    try { identitytName  = identityObj.getDisplayName(); } catch ( Exception e ) {} 
+    try { identitytUserName  = identityObj.getName(); } catch ( Exception e ) {}  
+    try { idendityPersonID = identityObj.getStringAttribute("personId"); } catch ( Exception e ) {}
+    try { identityFname = identityObj.getFirstname();  } catch ( Exception e ) {}
+    try { identityKnownAs = identityObj.getStringAttribute("KNOWN_AS");  } catch ( Exception e ) {} 
+    try { identityLname = identityObj.getLastname(); } catch ( Exception e ) {}
+    try { identityCreated = identityObj.getCreated(); } catch ( Exception e ) {}
+    try { identityEmail = identityObj.getEmail(); } catch ( Exception e ) {}
+    try { identityNetworkId = identityObj.getStringAttribute("networkId");  } catch ( Exception e ) {} 
+    try { identityStartDate = identityObj.getStringAttribute("enterpriseStartDate");  } catch ( Exception e ) {} 
+    try { identityEndDate = identityObj.getStringAttribute("enterpriseEndDate");  } catch ( Exception e ) {} 
+    try { identityPersonType= identityObj.getStringAttribute("personType");  } catch ( Exception e ) {} 
+  	try { identityCurrStartDate= identityObj.getStringAttribute("EMP_START_DATE");  } catch ( Exception e ) {} 
+    try { identityLoc= identityObj.getStringAttribute("location");  } catch ( Exception e ) {} 
+    try { mgrPersonID= identityObj.getManager().getStringAttribute("PERSON_ID");  } catch ( Exception e ) {} 
+    
+    if ( identityObj.isCorrelated() )
+        identityAuth = "Yes";
+    else
+        identityAuth = "No";
+    
+    //if ( !Util.isNotNullOrEmpty(identityLname) ) identityLname = "None";
+    //if ( !Util.isNotNullOrEmpty(identityFname) ) identityFname = "None";   
+    //if ( !Util.isNotNullOrEmpty(identityKnownAs) ) identityKnownAs = "None";
+    //if ( !Util.isNotNullOrEmpty(identitytName) ) identitytName = "None";
+    //if ( !Util.isNotNullOrEmpty(idendityPersonID) ) idendityPersonID = "None";
+	
+	//Print row to a file   
+    try {
+        //System.out.println("****** " + dateFormat.format(identityCreated) + "!" + identitytName);
+        fileWriter.println(dateFormat.format(identityCreated) + "!" + identityAuth + "!" + idendityPersonID + "!" + identitytName + "!" + identitytUserName + "!" + identityFname + "!" + identityKnownAs + "!" + identityLname+ "!" + identityEmail + "!" + identityNetworkId + "!" + identityStartDate + "!" + identityCurrStartDate + "!" + identityEndDate + "!" +identityPersonType + "!" + mgrPersonID + "!" + identityLoc);
+    } catch(Exception e) {
+        System.out.println("++++ " + identitytName);
+    }
+}  
+ 
+// Close File handles
+fileWriter.flush();
+fileWriter.close();
+
+sailpoint.tools.Util.flushIterator(it); 
+
+return "Contents saved to " + csvFileName + "    ***  Delimeter is !  ***";
