@@ -1,0 +1,37 @@
+/*
+    Rule:  aci_SetEmploymentStatus
+    Author:  Steve Nuffer
+	
+    Date:  August 15, 2016
+    Version:  1.2
+
+    Oracle 11i : TRUE/FALSE
+    Fusion:  Y/N
+
+*/
+import org.apache.log4j.Logger;
+import sailpoint.tools.Util;
+import sailpoint.object.*;
+
+Logger logger = Logger.getLogger("com.aci.rule.aci_SetEmployeeStatus");
+String isEmployee = link.getAttribute("CURRENT_EMPLOYEE_FLAG").toLowerCase();
+//Identity identityObj = link.getIdentity();
+String name = link.getAttribute("LAST_NAME") + ", " + link.getAttribute("FIRST_NAME");
+logger.debug("aci_SetEmployeeStatus");
+logger.debug("    Name=" + name + "  isEmployee=" + isEmployee);
+
+// Is the individual not Active
+if ( "false".equalsIgnoreCase(isEmployee) || "n".equalsIgnoreCase(isEmployee) ) { 
+    // Inactive
+    logger.debug("    inactive");
+    link.setAttribute("IIQDisabled", true);
+    //identity.setInactive(true);
+    identity.setPassword("");
+    return true;
+} else if ( "true".equalsIgnoreCase(isEmployee) || "y".equalsIgnoreCase(isEmployee)  ) {
+    // Active
+    logger.debug("    active");
+    link.setAttribute("IIQDisabled", false);
+    //identity.setInactive(false);
+    return false;
+}
