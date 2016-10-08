@@ -1,9 +1,8 @@
 /*
         Rule:  _SFAttributes
         Author:  Steve Nuffer
-	
-	
-				Version: 1.0
+		
+				Version: 1.2
 */
   
 import org.apache.log4j.Logger; 
@@ -48,7 +47,7 @@ qo.addFilter(qoFilter);
 
 //Print to a file
 //  Printer header to CSV file
-fileWriter.println("identityCreated!identitytName!identityFname!identityEmail!identityLname!acctUserName!acctPersonId!acctMail!acctType");
+fileWriter.println("identityCreated!identityAuth!isActive!identitytName!identityFname!identityEmail!identityLname!acctUserName!acctPersonId!acctMail!acctUserType!acctType");
 
 Iterator it = context.search(Link.class, qo);
 while (it.hasNext()) {  
@@ -60,9 +59,12 @@ while (it.hasNext()) {  
     String identityEmail = "";
     String identityLname = "";
     Date identityCreated = null;
+    boolean identityAuth = false;
+    boolean isActive = false;
     
     String acctUserName = "";
     String acctMail = "";
+    String acctUserType = "";
     String acctType = "";
     String acctPersonId = "";
 
@@ -75,12 +77,15 @@ while (it.hasNext()) {  
     try { identityEmail = identity.getEmail();  } catch ( Exception e ) {} 
     try { identityLname = identity.getLastname(); } catch ( Exception e ) {}
     try { identityCreated = identity.getCreated(); } catch ( Exception e ) {}
+    try { identityAuth = identity.isCorrelated(); } catch ( Exception e ) {}
+    try { isActive = !(identity.isInactive()); } catch ( Exception e ) {}
 
 	// Get application attributes
     Attributes attributes = link.getAttributes();
     try { acctUserName = attributes.getString("Username"); } catch ( Exception e ) {}
     try { acctPersonId = attributes.getString("Person_ID__c"); } catch ( Exception e ) {}
     try { acctMail = attributes.getString("Email"); } catch ( Exception e ) {}
+    try { acctUserType = attributes.getString("UserType"); } catch ( Exception e ) {}
     try { acctType = attributes.getString("accountType"); } catch ( Exception e ) {}
     
     if ( !Util.isNotNullOrEmpty(identityLname) ) identityLname = "None";
@@ -91,12 +96,12 @@ while (it.hasNext()) {  
     if ( !Util.isNotNullOrEmpty(acctUserName) ) acctUserName = "None";
     if ( !Util.isNotNullOrEmpty(acctPersonId) ) acctPersonId = "None";              
     if ( !Util.isNotNullOrEmpty(acctMail) ) acctMail = "None";
+    if ( !Util.isNotNullOrEmpty(acctUserType) ) acctUserType = "None";
     if ( !Util.isNotNullOrEmpty(acctType) ) acctType = "None";
 
 	//Print row to a file   
     try {
-        fileWriter.println(dateFormat.format(identityCreated) + "!" + identitytName + "!" + identityFname + "!" + identityEmail + "!" + identityLname + "!" + acctUserName + "!" + acctPersonId + "!" + acctMail + "!" + acctType);
-        //System.out.println(dateFormat.format(identityCreated) + "!" + identitytName + "!" + identityFname + "!" + identityEmail + "!" + identityLname + "!" + acctUserName + "!" + acctPersonId + "!" + acctMail + "!" + acctType);       
+        fileWriter.println(dateFormat.format(identityCreated) + "!" + identityAuth + "!" + isActive + "!" + identitytName + "!" + identityFname + "!" + identityEmail + "!" + identityLname + "!" + acctUserName + "!" + acctPersonId + "!" + acctMail + "!" + acctUserType + "!" + acctType);
     } catch(Exception e) {
         System.out.println("++++ " + identitytName);
     }
