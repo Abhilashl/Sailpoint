@@ -1,0 +1,103 @@
+/*
+    Rule:  aci_setManager
+    
+    Author:  Steve Nuffer
+	
+    Date:  September 30, 2016
+    Version:  1.2
+*/
+
+import java.util.*;
+import sailpoint.api.IdentityService;
+import sailpoint.object.*;
+import org.apache.log4j.Logger; 
+import sailpoint.tools.Util;
+
+Logger logger = Logger.getLogger("com.aci.rule.aci_setManager");  
+
+String appName = target.getApplication().getName();
+String identitytName  = identity.getDisplayName();
+String attrTarget = target.getName().toLowerCase();
+String appConnectorType = target.getApplication().getConnector();
+Identity managerObj = identity.getManager();
+Link mgrLink = null;
+
+logger.debug("Name= " + identitytName + "   appName=" + appName + "   appConnectorType=" + appConnectorType + "   Target=" + attrTarget);
+
+// Based upon connector Type
+switch (appConnectorType) {
+    //**************************************************************************
+    //*****  Active Directory
+    case "sailpoint.connector.ADLDAPConnector":
+        logger.debug("sailpoint.connector.ADLDAPConnector");
+
+        // Check for tsacorp forest
+        if ( appName.toLowerCase().contains("tsacorp") ) {
+            // A domain of tsacorp
+            mgrLink = getMgrLink(managerObj,"tsacorp");
+        } else {
+            mgrLink = getMgrLink(managerObj,appName);                
+        }    
+        
+        //Manager Found?
+        if ( mgrLink != null ) {
+            // Manager Link Found
+            String mgrDN = mgrLink.getNativeIdentity();
+            logger.debug("Found Link");
+            
+            // Check to see if empty
+            if ( Util.isNotNullOrEmpty(mgrDN) ) {
+                logger.debug("Return(" + attrTarget + ")=" + mgrDN);
+                return mgrDN;
+            }
+        } else {
+            // No manager found
+            logger.debug("Set Null Link");
+            return null;
+        }
+    break;
+    //**************************************************************************
+    //*****  Salesforce
+    case "sailpoint.connector.ForceConnector":
+    
+        logger.debug("sailpoint.connector.ForceConnector");
+        mgrLink = getMgrLink(managerObj,appName);
+        
+        //Manager Found?
+        if ( mgrLink != null ) {
+        
+            String mgrEmail = mgrLink.getAttribute("email");
+            String mgrId = mgrLink.getAttribute("Id");
+        
+            switch (attrTarget) {
+                case "manager_email__c":
+                    logger.debug("manager_email__c");
+                    // Check to see if mgrEmail is empty
+                    if ( Util.isNotNullOrEmpty(mgrEmail) ) {
+                        logger.debug("Return(" + attrTarget + ")=" + mgrEmail);
+                        return mgrEmail;
+                    } else {
+                        logger.debug("Set Null Link");
+                        return null;
+                    }
+                break;
+                case "managerid":
+                    logger.debug("managerid");
+                    // Check to see if mgrId is empty
+                    if ( Util.isNotNullOrEmpty(mgrId) ) {
+                        logger.debug("Return(" + attrTarget + ")=" + mgrId);
+                        return mgrId;
+                    } else {
+                        logger.debug("Set Null Link");
+                        return null;
+                    }
+                break;
+            } // end switch (target) 
+        } else {
+            // No manager found
+            logger.debug("Set Null Link");
+            return null;
+        } 
+    break;     
+} // switch end
+logger.debug("END");
