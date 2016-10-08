@@ -3,16 +3,19 @@
     
     Author:  Steve Nuffer
 	
-    Date:  August 16, 2016
-    Version:  1.8
+    Date:  October 6, 2016
+    Version:  2.1
 
 */
 import org.apache.log4j.Logger;
 import sailpoint.object.*;
 import sailpoint.tools.Util; 
+import sailpoint.api.IdentityService;
 
 // Declare a logger class
 Logger logger = Logger.getLogger("com.aci.rule.aci_AccountType");
+
+logger.debug("Oct 6");
 
 //Setup Variables Custom Map
 Custom custom = context.getObjectByName(Custom.class,"accountTypeMap");
@@ -23,6 +26,7 @@ Identity identityObj = link.getIdentity();
 String identityEmail = identityObj.getEmail();
 boolean authIdentity = identityObj.isCorrelated();
 String identitytName  = identityObj.getDisplayName();
+IdentityService identitySvc = new IdentityService(context);
 
 // Based upon connector Type
 switch (appConnectorType) {
@@ -34,16 +38,8 @@ switch (appConnectorType) {
         String acctDistinguishedName = link.getAttribute("distinguishedName");
         String acctMail = link.getAttribute("mail");
               
-        if ( acctSamName != null &amp;&amp; acctSamName != void &amp;&amp; !(acctSamName.equals("")) ) {
-
-            //********************
-            // Check the XML file for special cases
-            try {
-               tmpAcctType	= custom.get("Active Directory").get("Users").get(acctSamName).get("Account Type");
-            } catch(Exception e) {
-                ;  // Do nothing
-            }
-                
+        if ( acctSamName != null && acctSamName != void && !(acctSamName.equals("")) ) {
+              
             //********************
             // Check if Account Type = Service
             if ( acctDistinguishedName.toLowerCase().contains("ou=service accounts") ) {
@@ -59,7 +55,16 @@ switch (appConnectorType) {
                     tmpAcctType = "Personal-Other";
                 }
             }
+            
+            //********************
+            // Check the XML file for special cases
+            try {
+               tmpAcctType	= custom.get("Active Directory").get("Users").get(acctSamName).get("Account Type");
+            } catch(Exception e) {
+                ;  // Do nothing
+            }    
         }
+        
         logger.debug("Active Directory (" + identitytName + ")[" + authIdentity + "] acctSamName=" + acctSamName + " identityEmail=" + identityEmail + " AcctType=" + tmpAcctType );
         break;
      //**************************************************************************
@@ -68,17 +73,47 @@ switch (appConnectorType) {
         // Get the applications native account
         String acctNativeIdentity = link.getNativeIdentity();
         String acctMail = link.getAttribute("Email");
+        String acctUserType = link.getAttribute("UserType");
+        String acctProfileName = link.getAttribute("ProfileName");
 
-        //********************
-        // Check if Account Type = Personal-Primary OR Personal-Other
+        // Authoritative Application
         if ( authIdentity ) {
-            tmpAcctType = "Personal-Primary"; 
+            int numLinks = identitySvc.countLinks( identityObj, app);
+            // Single Account?
+            if ( numLinks == 1 ) {
+                // Single
+                tmpAcctType = "Personal-Primary"; 
+            } else {
+                // Multiple
+                // Check UserType for Standard and matching email to SF Username
+                if ( "Standard".equalsIgnoreCase(acctUserType) && acctNativeIdentity.equalsIgnoreCase(identityEmail) ) {
+                    tmpAcctType = "Personal-Primary"; 
+                } else {
+                    tmpAcctType = "Personal-Other"; 
+                }
+            }
+            // Generic, Service, System?
+            if ( "API Only User".equalsIgnoreCase(acctProfileName) ) 
+                tmpAcctType="Service";
         }
+ 
+        //********************
+        // Check the XML file for special cases
+        try {
+           tmpAcctType	= custom.get("Salesforce").get("Users").get(acctNativeIdentity).get("Account Type");
+        } catch(Exception e) {
+            ;  // Do nothing
+        }
+ 
         logger.debug("Salesforce (" + identitytName + ")[" + authIdentity + "] acctNativeIdentity=" + acctNativeIdentity + " identityEmail=" + identityEmail + " AcctType=" + tmpAcctType );
         break;
     //**************************************************************************
     //*****  Others
     default:
+        // Authoritative Application
+        if ( app.isAuthoritative() )
+            tmpAcctType = "Personal-Primary"; 
+    
         String acctNativeIdentity = link.getNativeIdentity();   
         logger.debug("appConnectorType=" + appConnectorType + " (" + identitytName + ")[" + authIdentity + "] acctNativeIdentity=" + acctNativeIdentity + " identityEmail=" + identityEmail + " AcctType=" + tmpAcctType );
     break;
