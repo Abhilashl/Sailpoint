@@ -1,0 +1,54 @@
+/*
+    Rule:  aci_PerformReversal
+    Author:  Steve Nuffer
+	
+    Date:  October 7, 2016	
+	Version: 1.0
+
+    if (Notify Y --> N) and (CURRENT_EMPLOYEE_FLAG Y --> Y)
+    Send Reversal / Extension
+    
+*/
+import org.apache.log4j.Logger; 
+import sailpoint.object.*;
+import sailpoint.tools.Util;
+
+Logger logger = Logger.getLogger("com.aci.rule.aci_PerformReversal");
+logger.debug("aci_PerformReversal");
+
+boolean performLCM = false;
+
+// The instanceof operator returns false if the object is null or void
+// as well as if it is a different object type.
+if (!(previousIdentity instanceof Identity) || !(newIdentity instanceof Identity)) {
+    // New Hire or Error on newIdentity
+    logger.debug("    Identity Null");
+    return false;
+}
+
+// Exit if this is this a Hire or Rehire
+if ( previousIdentity.isInactive() || newIdentity.isInactive() ) {
+    // Hire or Rehire
+    return false;
+}
+
+// Identity is not from an authoritative source
+if ( ! newIdentity.isCorrelated() ) {
+    logger.debug("    Not authoritative identity");
+    return false;
+}
+
+String identityPersonID = newIdentity.getAttribute("personId");
+logger.debug("    PERSON_ID=" + identityPersonID);
+
+// Notification Y-->N
+String oldTermNotify = previousIdentity.getAttribute("termNotification");
+String newTermNotify = newIdentity.getAttribute("termNotification");
+
+if ( "Y".equalsIgnoreCase(oldTermNotify) && "N".equalsIgnoreCase(newTermNotify) ) {
+    // Reversal or Extension
+    performLCM=true;
+}
+
+logger.debug ("    performLCM=" + performLCM);
+return performLCM;
