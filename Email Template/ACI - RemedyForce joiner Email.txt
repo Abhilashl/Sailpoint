@@ -6,8 +6,8 @@
 &lt;h2>$personType starting on $startDate&lt;/h2>
 &lt;pre>
 &lt;h3>-----  $personType Information  -----&lt;/h3>
-     Last Name:      $lastname
-     First Name:     $firstname
+     Last Name:   $lastname
+     First Name:  $firstname
 
      Start Date:  $startDate
 #if ( $personType == "Contingent Worker" ) 
