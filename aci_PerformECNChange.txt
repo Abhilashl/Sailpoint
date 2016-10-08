@@ -2,9 +2,11 @@
     Rule:  aci_PerformECNChange
     Author:  Steve Nuffer
 	
-    Date:  August 31, 2016	
-	Version: 1.21
-
+    Date:  October 7, 2016	
+	Version: 1.3
+    
+    If ( Change Dept, Location, Department, Title) AND (CURRENT_EMPLOYEE_FLAG Y --> Y)
+        Send ECN
 */
 import org.apache.log4j.Logger; 
 import sailpoint.object.*;
@@ -23,9 +25,9 @@ if (!(previousIdentity instanceof Identity) || !(newIdentity instanceof Identity
     return false;
 }
 
-// Is this a new Rehire
-if ( previousIdentity.isInactive() && ! newIdentity.isInactive() ) {
-    // Rehire
+// Exit if this is this a Hire or Rehire
+if ( previousIdentity.isInactive() || newIdentity.isInactive() ) {
+    // Hire or Rehire
     return false;
 }
 
