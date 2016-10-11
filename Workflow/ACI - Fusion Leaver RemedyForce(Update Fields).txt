@@ -5,19 +5,18 @@
     Date:  August 4, 2016
     Version:  1.0
 */
-
-
 import org.apache.log4j.Logger;
 import sailpoint.object.*;
 import sailpoint.aci.util.ACIUtil;
 
-
 Logger logger = Logger.getLogger("com.aci.wf.leaver");
 logger.debug("ACI - Fusion Leaver RemedyForce(Update Fields)");
+logger.debug("identityName=" + identityName);
 
 Identity identityObject = context.getObjectByName(Identity.class, identityName);
 String employeeEmail = identityObject.getEmail();
 String networkId = identityObject.getAttribute("networkId");
+
 String managerEmail  = identityObject.getManager().getEmail();
 String managerName  = identityObject.getManager().getDisplayName();
 String postalCode  = identityObject.getAttribute("postalCode");
@@ -66,6 +65,6 @@ workflow.put("endDate",endDate);
 workflow.put("firstname",firstname);
 workflow.put("lastname",lastname);
 
-logger.debug("Firstname: " + firstname + " Lastname: " + lastname + "  Email: " + email);
+logger.debug("Firstname: " + firstname + " Lastname: " + lastname + "  Email: " + employeeEmail);
 
 logger.debug("end");

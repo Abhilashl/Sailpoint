@@ -6,7 +6,10 @@
         
     Author:  Steve Nuffer
 	
-    Date:  July 5, 2016
+    Date:  July 5, 2016  `
+    
+    
+    
     Version:  1.3
 
 */
@@ -31,7 +34,7 @@ String emailDomain = "@aciworldwide.com";
 boolean foundCubeName = false;
 
 // Remove all non-alpha characters and make lowercase
-if ( Util.isNotNullOrEmpty(acctFname) ) 
+if ( l(acctFname) ) 
     acctFname = acctFname.replaceAll("[^a-zA-Z]", "").toLowerCase().trim();
 if ( Util.isNotNullOrEmpty(acctLname) ) 
     acctLname = acctLname.replaceAll("[^a-zA-Z]", "").toLowerCase().trim();

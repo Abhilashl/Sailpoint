@@ -1,3 +1,10 @@
+/*
+    Workflow:  aci_Library
+        
+    Date:  August 14, 2016
+    Version:  1.0
+*/
+
 import org.apache.log4j.Logger;
 import sailpoint.object.*;
 import sailpoint.api.*;
@@ -6,6 +13,34 @@ import java.util.Iterator;
 import java.util.HashMap;
 import java.util.Map;
   
+/********************************************************************************
+*  getMgrLink  1.1
+*    Returns the link for an Application, appName, that is their Personal-Primary Account
+*       No link found is a null return
+********************************************************************************/  
+public Link getMgrLink(Identity managerObj, String appName) {
+
+    Link primaryLink = null;
+
+    List mgrLinkLists = managerObj.getLinks();
+
+    if ( null != mgrLinkLists) {
+       for ( Link mgrLink : mgrLinkLists ) {
+            String mgrApp = mgrLink.getApplication().getName();
+            String mgrAcctType = mgrLink.getAttribute("accountType");
+            
+            logger.debug("appName=" + appName + " MgrApp=" + mgrApp + "  mgrAcctType=" + mgrAcctType);
+            
+            // Check for the correct Link and if this is their personal-primary account
+            if ( mgrApp.toLowerCase().contains(appName.toLowerCase()) &amp;&amp; "personal-primary".equalsIgnoreCase(mgrAcctType)) {
+                logger.debug("Manager link found");
+                primaryLink = mgrLink;
+                break;
+            }       
+        }
+    }
+    return primaryLink;
+}
   
 /********************************************************************************
 *  doesExists

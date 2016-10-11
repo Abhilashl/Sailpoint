@@ -1,16 +1,24 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <!DOCTYPE EmailTemplate PUBLIC "sailpoint.dtd" "sailpoint.dtd">
-<EmailTemplate created="1460488774800" id="8a8596e453d95d3301540bea24900b49" modified="1471271951645" name="ACI - RemedyForce Leaver Email">
+<EmailTemplate created="1473943965674" id="8a8596e4572944e201572de80fea021d" modified="1474037789442" name="ACI - RemedyForce Leaver Reversal Email">
   <Body>
   &lt;html>
-&lt;h2>$personType ending on $endDate&lt;/h2>
+
+#if ($personType.toLowerCase().contains("employee") )
+&lt;h2>$personType TERM Reversal&lt;/h2>
+#else
+&lt;h2>$personType Extension to $endDate&lt;/h2>
+#end          
+    
 &lt;pre>
 &lt;h3>----- $personType Information  -----&lt;/h3>
      Last Name:   $lastname
      First Name:  $firstname
 
+#if ($endDate)
      Term Date:   $endDate
-     
+#end
+    
      Title:       $employeeTitle
      Person Type: $personType
      Division:    $division
@@ -26,6 +34,7 @@
      Manager:        $managerName
      Manager Email:  $managerEmail
 
+     ECN Effective Date: $effectiveDate    
           
 &lt;h3>-----  Account Information  -----&lt;/h3>
      Network ID:  $networkId
@@ -57,6 +66,10 @@ This e-mail message and any attachments may contain confidential, proprietary or
     </Inputs>
   </Signature>
   <Subject>
-     Term - $lastname, $firstname $endDate
+#if ($personType.toLowerCase().contains("employee") )
+     Term Reversal - $lastname, $firstname
+#else
+     Extension - $lastname, $firstname
+#end      
   </Subject>
 </EmailTemplate>

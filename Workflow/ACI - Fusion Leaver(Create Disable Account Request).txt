@@ -98,6 +98,14 @@ if (plan==null) plan=new ProvisioningPlan();
                     applist.add(map);  
                     break;
                 //**************************************************************************
+                //*****  Webex
+                case "sailpoint.connector.ForceConnector":
+                    map.put("name", appName);
+                    map.put("account", acctName);
+                    map.put("info", "Single Sign On (SSO)");
+                    applist.add(map);  
+                    break;                    
+                //**************************************************************************
                 //*****  Salesforce
                 case "sailpoint.connector.ForceConnector":
                     map.put("name", appName);
@@ -112,15 +120,20 @@ if (plan==null) plan=new ProvisioningPlan();
                     map.put("account", acctName);
                     
                     // Check the specific name of the Application
-                    if ( appName.toLowerCase().contains("clarity" ) ) {
+                    if (appName.toLowerCase().contains("clarity") {
+                        //Clarity
+                        map.put("info", "Single Sign On (SSO)");
+                    } else if (appName.toLowerCase().contains("webex")) {
+                        //Webex
                         map.put("info", "Single Sign On (SSO)");
                     } else {
+                        //Other (NIS)
                         map.put("info", "");
                     }
                     applist.add(map);  
                     break;                    
                 //**************************************************************************
-                //*****  Delimted file
+                //*****  Delimited file
                 case "sailpoint.connector.DelimitedFileConnector":                  
                     // Check the specific name of the Application
                     if ( appName.toLowerCase().contains("fusion" ) ) {
@@ -187,4 +200,3 @@ workflow.put("termDate", termDate);
 workflow.put("sendLdapNotification", sendLdapNotification);
 
 return plan;
-    

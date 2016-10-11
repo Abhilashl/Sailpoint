@@ -2,8 +2,8 @@
     Workflow:  ACI - Fusion Joiner
     Step:  Create Account Request
     
-    Date:  July 20, 2016
-    Version:  1.1
+    Date:  September 1, 2016
+    Version:  1.2
 */
 import sailpoint.object.*;
 import sailpoint.api.*;
@@ -199,33 +199,17 @@ switch (identityPerType.toLowerCase()) {
      
         // Set Manager
         //
-        logger.debug("\tSet Manager");       
-        if ( managerObj != null ) {
-            String mgrDN = "";
+        logger.debug("\tSet Manager");
+        Link mgrLink = getMgrLink(managerObj,appPrimaryAD);
+        
+        if ( mgrLink != null ) {
+            String mgrDN = mgrLink.getNativeIdentity();
 
-            List mgrLinkLists = managerObj.getLinks();
-            
-            if ( null != mgrLinkLists) {
-                for ( Link mgrLink : mgrLinkLists ) {
-                    String mgrApp = mgrLink.getApplication().getName();
-                    logger.debug("mgrApp=" + mgrApp );
-
-                    String mgrAcctType = mgrLink.getAttribute("accountType");
-                    
-                    // Check for the correct Link and if this is their personal-primary account
-                    //if ( mgrApp.equalsIgnoreCase(appPrimaryAD) && "personal-primary".equalsIgnoreCase(mgrAcctType))  {
-                    if ( mgrApp.toLowerCase().contains("tsacorp.com") && "personal-primary".equalsIgnoreCase(mgrAcctType))  {
-                        logger.debug("AD Manager Found");
-                        mgrDN = mgrLink.getNativeIdentity();
-                        break;
-                    }
-                }
-            }
             // Check to see if empty
             if ( Util.isNotNullOrEmpty(mgrDN) )
                 acctReq.add(new AttributeRequest("manager",ProvisioningPlan.Operation.Add,mgrDN));
         }
-        
+                    
         // Generate password
         //
         logger.debug("\tGenerate password");       
@@ -305,29 +289,13 @@ switch (identityPerType.toLowerCase()) {
         
         // Set Manager
         //
-        if ( managerObj != null ) {
-            String mgrEmail = "";
-
-            List mgrLinkLists = managerObj.getLinks();
-
-            if ( null != mgrLinkLists) {
-                for ( Link mgrLink : mgrLinkLists ) {
-                    String mgrApp = mgrLink.getApplication().getName();
-                    String mgrAcctType = mgrLink.getAttribute("accountType");
-                    
-                    logger.debug("MgrApp=" + mgrApp + "  mgrAcctType=" + mgrAcctType);
-                    
-                    // Check for the correct Link and if this is their personal-primary account
-                    //if ( mgrApp.equalsIgnoreCase(appSForce) && "personal-primary".equalsIgnoreCase(mgrAcctType))  {
-                    if ( mgrApp.equalsIgnoreCase(appSForce) && mgrAcctType.toLowerCase().contains("personal"))  {
-                        // Use Email from Sforce because of ".full"
-                        logger.debug("Found the correct one");
-                        mgrEmail = mgrLink.getAttribute("email");
-                        mgrId = mgrLink.getAttribute("Id");
-                        break;
-                    }
-                }
-            }
+        logger.debug("\tSet Manager");
+        Link mgrLink = getMgrLink(managerObj,appPrimaryAD);
+        
+        if ( mgrLink != null ) {
+        
+            String mgrEmail = mgrLink.getAttribute("email");
+            String mgrId = mgrLink.getAttribute("Id");
 
             // Check to see if mgrEmail is empty
             if ( Util.isNotNullOrEmpty(mgrEmail) ) 
@@ -336,6 +304,7 @@ switch (identityPerType.toLowerCase()) {
             if ( Util.isNotNullOrEmpty(mgrId) ) 
                 sfReq.add(new AttributeRequest("ManagerId",ProvisioningPlan.Operation.Add,mgrId));
         }
+   
         // Add Workflow Variables
         workflow.put("sfusername", sfuser);
   

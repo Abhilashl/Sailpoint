@@ -12,7 +12,8 @@ import sailpoint.tools.Message;
 import sailpoint.object.EmailOptions;
 import sailpoint.object.EmailTemplate;
 import sailpoint.api.*;
-		//Send notification
+
+//Send notification
 EmailOptions options = new EmailOptions();
 
 EmailTemplate emailTemplate = context.getObjectByName(EmailTemplate.class, "ACI - Leaver Mgr Account");

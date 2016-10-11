@@ -1,0 +1,70 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<!DOCTYPE EmailTemplate PUBLIC "sailpoint.dtd" "sailpoint.dtd">
+<EmailTemplate created="1431473788525" id="8a8596e54d343e6a014d4a7c966d0032" modified="1470930158641" name="ACI - Leaver Mgr Account">
+  <Body>
+&lt;html>
+&lt;head>
+&lt;style>
+table, th, td {
+    border: 1px solid black;
+}
+&lt;/style>
+&lt;/head>
+&lt;body>
+&lt;h1 style="text-align:center">&lt;img src="https://identitydev.am.tsacorp.com/identityiq/images/ACI/01.png">&lt;/h1>
+&lt;p style="text-align:center">Employee Information &lt;/p>
+&lt;table align="center">
+  &lt;tr>
+    &lt;td>&lt;b>Name:&lt;/b>&lt;/td>
+    &lt;td>$firstname $lastname &lt;/td>		
+  &lt;/tr>
+  &lt;tr>
+    &lt;td>&lt;b>Title:&lt;/b>&lt;/td>
+    &lt;td>$employeeTitle &lt;/td>		
+  &lt;/tr>
+  &lt;tr>
+    &lt;td>&lt;b>Type:&lt;/b>&lt;/td>
+    &lt;td>$personType &lt;/td>		
+  &lt;/tr>
+  &lt;tr>
+    &lt;td>&lt;b>Email Address:&lt;/b>&lt;/td>
+    &lt;td>$email&lt;/td>		
+  &lt;/tr>
+  &lt;tr>
+    &lt;td>&lt;b>Employee Manager:&lt;/b>&lt;/td>
+    &lt;td>$manager&lt;/td>		
+  &lt;/tr>
+  &lt;tr>
+    &lt;td>&lt;b>Department:&lt;/b>&lt;/td>
+    &lt;td>$department&lt;/td>		
+  &lt;/tr>
+  &lt;tr>
+    &lt;td>&lt;b>Location / Country:&lt;/b>&lt;/td>
+    &lt;td>$location / $country&lt;/td>		
+  &lt;/tr>
+  &lt;tr>
+    &lt;td>&lt;b>End Date:&lt;/b>&lt;/td>
+    &lt;td>$termDate&lt;/td>		
+  &lt;/tr>
+&lt;/table>
+&lt;p style="text-align:center">Accounts Disabled &lt;/p>
+&lt;table align="center">
+&lt;tr>
+&lt;td>&lt;b>Application&lt;/b>&lt;/td>&lt;td>&lt;b>Account&lt;/b>&lt;/td>&lt;td>&lt;b>Additional Information&lt;/b>&lt;/td>
+&lt;/tr>
+#foreach ($attr in $list)
+&lt;tr>
+&lt;td>$attr.name&lt;/td>&lt;td>$attr.account&lt;/td>&lt;td>$attr.info&lt;/td>
+&lt;/tr>
+#end
+&lt;/table>
+&lt;/body>
+&lt;/html>
+ </Body>
+  <Description>
+	Email Template for Terminations 
+  </Description>
+  <Subject>
+	Terminate request - $lastname, $firstname
+  </Subject>
+</EmailTemplate>
