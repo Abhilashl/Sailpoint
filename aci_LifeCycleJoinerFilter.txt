@@ -1,0 +1,36 @@
+/*
+    Rule:  aci_LifeCycleJoinerFilter
+    Author:  Steve Nuffer
+	
+    Date:  November 7, 2016
+    Version:  1.0
+
+*/
+import org.apache.log4j.Logger;
+import sailpoint.object.*;
+import sailpoint.tools.Util;
+
+Logger logger = Logger.getLogger("com.aci.aci_LifeCycleJoinerFilter");
+logger.debug("aci_LifeCycleJoinerFilter");
+String identityPerType = identity.getAttribute("personType");
+String identityCompany = identity.getAttribute("company");
+
+if ( !Util.isNotNullOrEmpty(identityPerType) ) identityPerType = "";
+if ( !Util.isNotNullOrEmpty(identityCompany) ) identityCompany = "";
+
+if ( identity.isCorrelated() ) {
+    // New Identity and it's authoritative
+    logger.debug("Fusion Joiner WF:" + identity.getDisplayName() + "  Include Identity");
+    
+    // Is this a Fiserv Contingent
+    if ( identityPerType.equalsIgnoreCase("contingent worker") && identityCompany.equalsIgnoreCase("fiserv")  ) { 
+        // Fiserv Contingent
+        logger.debug("    Fiserv contingent exclusion");
+        return false;
+    } else {
+        return true;
+    }
+} 
+
+logger.debug("Fusion Joiner WF:" + identity.getDisplayName() + "  Exclude Identity");
+return false
