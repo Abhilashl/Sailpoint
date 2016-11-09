@@ -2,10 +2,10 @@
     Rule:  aci_PerformECNChange
     Author:  Steve Nuffer
 	
-    Date:  October 7, 2016	
-	Version: 1.3
+    Date:  November 8, 2016	
+    Version: 1.4
     
-    If ( Change Dept, Location, Department, Title) AND (CURRENT_EMPLOYEE_FLAG Y --> Y)
+    If ( Change Dept, Location, Department #, Title) AND (CURRENT_EMPLOYEE_FLAG Y --> Y)
         Send ECN
 */
 import org.apache.log4j.Logger; 
@@ -42,14 +42,21 @@ logger.debug("    PERSON_ID=" + identityPersonID);
 
 String oldLocation = previousIdentity.getAttribute("location");
 String newLocation = newIdentity.getAttribute("location");
-String oldDeptName = previousIdentity.getAttribute("DEPT_NAME");
-String newDeptName = newIdentity.getAttribute("DEPT_NAME");
 String oldemployeeTitle = previousIdentity.getAttribute("employeeTitle");
 String newemployeeTitle = newIdentity.getAttribute("employeeTitle");
 String oldManager = "";
 String newManager = "";
 String oldManagerPersonID = "";
 String newManagerPersonID = "";
+
+// Use Dept Number not DeptName
+String oldDeptName = previousIdentity.getAttribute("DEPT_NAME");
+String tmpDeptNum = oldDeptName.replaceAll("[^0-9]", " ");
+String oldDeptNum = tmpDeptNum.substring(0, tmpDeptNum.indexOf(' '));
+
+String newDeptName = newIdentity.getAttribute("DEPT_NAME");
+tmpDeptNum = newDeptName.replaceAll("[^0-9]", " ");
+String newDeptNum = tmpDeptNum.substring(0, tmpDeptNum.indexOf(' '));
 
 //Not all authoritative identities have managers
 try {
@@ -69,6 +76,8 @@ if ( !Util.isNotNullOrEmpty(oldLocation) ) oldLocation = "";
 if ( !Util.isNotNullOrEmpty(newLocation) ) newLocation = "";
 if ( !Util.isNotNullOrEmpty(oldDeptName) ) oldDeptName = "";
 if ( !Util.isNotNullOrEmpty(newDeptName) ) newDeptName = "";
+if ( !Util.isNotNullOrEmpty(oldDeptNum ) ) oldDeptNum = "";
+if ( !Util.isNotNullOrEmpty(newDeptNum ) ) newDeptNum = "";
 if ( !Util.isNotNullOrEmpty(oldemployeeTitle) ) oldemployeeTitle = "";
 if ( !Util.isNotNullOrEmpty(newemployeeTitle) ) newemployeeTitle = "";
 if ( !Util.isNotNullOrEmpty(oldManager) ) oldManager = "";
@@ -78,7 +87,7 @@ if ( !Util.isNotNullOrEmpty(newManagerPersonID ) ) newManagerPersonID = "";
 
 // Compare old and new values
 if ( ! oldLocation.equalsIgnoreCase(newLocation) ) performLCM = true;
-if ( ! oldDeptName.equalsIgnoreCase(newDeptName) ) performLCM = true;
+if ( ! oldDeptNum.equalsIgnoreCase(newDeptNum) ) performLCM = true;
 if ( ! oldemployeeTitle.equalsIgnoreCase(newemployeeTitle) ) performLCM = true;
 if ( ! oldManagerPersonID.equalsIgnoreCase(newManagerPersonID) ) performLCM = true;
 
