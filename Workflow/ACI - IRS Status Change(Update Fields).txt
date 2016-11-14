@@ -1,0 +1,107 @@
+/*
+    Workflow:  ACI - IRS Status Change
+    Step:  Update Fields
+    
+    Date:  November 14, 2016
+    Version:  1.11
+*/
+import org.apache.log4j.Logger;
+import sailpoint.object.*;
+import sailpoint.aci.util.ACIUtil;
+
+Logger logger = Logger.getLogger("com.aci.wf.irsChange");
+logger.debug("ACI - IRS Status Change(Update Fields)");
+
+List changeList = new ArrayList();
+String oldIRSStatus = "";
+String oldIRSCertDate = "";
+String newIRSStatus = "";
+String newIRSCertDate = "";
+
+// Is event data available?
+if(event != null){  
+    logger.debug("    event found for " + event.getIdentityName()); 
+    Identity oldIdentity = event.getOldObject();  
+    Identity newIdentity = event.getNewObject();
+
+    if (oldIdentity !=null) {
+        oldIRSStatus= oldIdentity.getAttribute("irsStatus");
+        oldIRSCertDate= oldIdentity.getAttribute("irsCertDate"); 
+        
+        // Check to see if Status is blank
+        if ( !Util.isNotNullOrEmpty(oldIRSStatus) ) oldIRSStatus= "*blank*";
+        if ( !Util.isNotNullOrEmpty(oldIRSCertDate) ) oldIRSCertDate= "*blank*";
+        logger.debug("oldIRSStatus=" + oldIRSStatus);
+        logger.debug("oldIRSCertDate=" + oldIRSCertDate);
+    } 
+
+    if (newIdentity !=null) {
+        newIRSStatus= newIdentity.getAttribute("irsStatus");
+        newIRSCertDate= newIdentity.getAttribute("irsCertDate"); 
+        
+        // Check to see if Status is blank
+        if ( !Util.isNotNullOrEmpty(newIRSStatus) ) newIRSStatus= "*blank*";
+        if ( !Util.isNotNullOrEmpty(newIRSCertDate) ) newIRSCertDate= "*blank*";
+        logger.debug("newIRSStatus=" + newIRSStatus);
+        logger.debug("newIRSCertDate=" + newIRSCertDate);
+    }
+    
+    // IRS Status Change
+    if ( ! oldIRSStatus.equalsIgnoreCase(newIRSStatus)){
+        Map changesMap = new HashMap();
+
+        // Status Change
+        changesMap.put("description", "IRS Status");
+        changesMap.put("oldValue", oldIRSStatus);
+        changesMap.put("newValue", newIRSStatus);
+        changeList.add(changesMap); 
+    }   
+        
+    if ( ! oldIRSCertDate.equalsIgnoreCase(newIRSCertDate)){
+        Map changesMap = new HashMap();
+
+        // Certification Date Change
+        changesMap.put("description", "IRS Certification Date");
+        changesMap.put("oldValue", oldIRSCertDate);
+        changesMap.put("newValue", newIRSCertDate);
+
+        changeList.add(changesMap); 
+    }   
+
+    // Add the changes to the workflow
+    workflow.put("changeList", changeList);   
+}
+
+// 
+Identity identityObj = context.getObjectByName(Identity.class, identityName);
+
+String employeeEmail = identityObj.getEmail();
+String networkId = identityObj.getAttribute("networkId");
+String managerEmail  = identityObj.getManager().getEmail();
+String managerName  = identityObj.getManager().getDisplayName();
+String personType = identityObj.getAttribute("personType");
+String personId = identityObj.getAttribute("personId");
+String company = identityObj.getAttribute("company");
+String location = identityObj.getAttribute("location");
+String firstname = identityObj.getFirstname();
+String lastname = identityObj.getLastname();
+
+//Check if Null or empty
+if ( !Util.isNotNullOrEmpty(networkId) ) networkId = "";
+if ( !Util.isNotNullOrEmpty(employeeEmail ) ) employeeEmail = "";
+if ( !Util.isNotNullOrEmpty(company) ) company = "";
+if ( !Util.isNotNullOrEmpty(managerEmail) ) managerEmail = "";
+if ( !Util.isNotNullOrEmpty(managerName) ) managerName = "";
+if ( !Util.isNotNullOrEmpty(location) ) location = "";
+
+//  Update WFlow variables
+workflow.put("employeeEmail",employeeEmail);
+workflow.put("networkId",networkId);
+workflow.put("managerEmail",managerEmail);
+workflow.put("managerName",managerName);
+workflow.put("personType",personType);
+workflow.put("firstname",firstname);
+workflow.put("lastname",lastname);        
+workflow.put("company",company);       
+workflow.put("personId",personId);
+workflow.put("location",location);

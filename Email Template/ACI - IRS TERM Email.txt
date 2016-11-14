@@ -1,0 +1,55 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<!DOCTYPE EmailTemplate PUBLIC "sailpoint.dtd" "sailpoint.dtd">
+<EmailTemplate created="1478806899095" id="8a8596e4584a02a401584fc289970156" modified="1478806962768" name="ACI - IRS Term Email">
+  <Body>    
+&lt;html>
+&lt;pre>
+&lt;h3>-----  $personType Information  -----&lt;/h3>
+    Last Name:   $lastname
+    First Name:  $firstname
+#if ( $personId )       
+    PersonID:    $personId
+#end 
+#if ($company) 
+    Company:     $company
+#end
+#if ($irsStatus)
+    IRS Status:  $irsStatus
+    IRS Certification Date:  $irsCertDate
+#end
+&lt;br>
+    Manager:        $managerName
+    Manager Email:  $managerEmail
+
+    Network ID:  $networkId
+    Email:       $employeeEmail
+
+&lt;br>
+&lt;B>Statement of Confidentiality: &lt;/B>
+This e-mail message and any attachments may contain confidential, proprietary or on-public information. This information is intended solely for the designated recipient(s). If an addressing or transmission error has misdirected this e-mail, please notify the sender immediately and destroy this e-mail. Any review, dissemination, use or reliance upon this information by unintended recipients is prohibited.     
+&lt;/pre>     
+&lt;html>
+ </Body>
+  <Description>
+	Email template for IRS Status changes
+  </Description>
+  <Signature>
+    <Inputs>
+      <Argument name="firstname" type="string">
+        <Description>Identity</Description>
+      </Argument>
+      <Argument name="lastname" type="string">
+        <Description>Identity</Description>
+      </Argument>
+      <Argument name="networkId" type="string">
+        <Description>Network Id </Description>
+      </Argument>
+      <Argument name="email" type="string">
+        <Description>Employee email </Description>
+      </Argument>
+    </Inputs>
+  </Signature>
+  <Subject>
+     ACI IRS Term Email - $lastname, $firstname
+  </Subject>
+</EmailTemplate>

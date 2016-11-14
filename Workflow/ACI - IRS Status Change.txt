@@ -1,0 +1,218 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<!DOCTYPE Workflow PUBLIC "sailpoint.dtd" "sailpoint.dtd">
+<Workflow created="1478721905855" explicitTransitions="true" id="8a8596e4584a02a401584ab1a4bf0030" libraries="Identity" modified="1478795060486" monitored="true" name="ACI - IRS Status Change" type="IdentityLifecycle">
+  <Variable input="true" name="trigger">
+    <Description>The IdentityTrigger</Description>
+  </Variable>
+  <Variable input="true" name="event" transient="true">
+    <Description>The IdentityChangeEvent.  It can be used to build
+      the provisioning plan, but does not need to be
+      persisted with the case, so marked as transient.</Description>
+  </Variable>
+  <Variable input="true" name="identityName">
+    <Description>The name of the identity.</Description>
+  </Variable>
+  <Variable initializer="script:(identityDisplayName != void) ? identityDisplayName : resolveDisplayName(identityName)" input="true" name="identityDisplayName">
+    <Description>The displayName of the identity being updated.
+      Query for this using a projection query and fall back to the name.</Description>
+  </Variable>
+  <Variable name="plan">
+    <Description>The provisioning plan, which is built by a service method.</Description>
+  </Variable>
+  <Variable editable="true" initializer="false" name="optimisticProvisioning">
+    <Description>Set to true to enable optimistic provisioning.  This will cause
+      changes to the entitlements compiled from role assignments to be 
+      applied immediately to the identity cube rather than waiting
+      for the next refresh/reaggregation after the provisioning system
+      completes the request.</Description>
+  </Variable>
+  <Variable editable="true" initializer="true" name="foregroundProvisioning">
+    <Description>Normally provisioning is done in a step that uses the &amp;quot;background&amp;quot;
+      option to force the workflow to be suspend and be resumed in a
+      background task thread.  This prevents the browser session from
+      hanging since provision can sometimes take a long time.  For demos
+      and testing it can be better to do this in the foreground so that
+      provisioning will have been performed when control is returned to the
+      user.  This prevents having to run the Perform Maintenance task to 
+      see the results of the request.</Description>
+  </Variable>
+  <Variable initializer="spadmin" input="true" name="fallbackApprover">
+    <Description>A String that specifies the name of the Identity that will 
+      be assigned any approvals where the owner of the approver 
+      can&amp;#39;t be resolved. Example if the scheme is &amp;quot;owner&amp;quot; and the 
+      application doesn&amp;#39;t specify and owner.</Description>
+  </Variable>
+  <Variable initializer="LCM" input="true" name="source">
+    <Description>String version of sailpoint.object.Source to indicate
+      where the request originated.  Defaults to LCM.</Description>
+  </Variable>
+  <Variable initializer="true" input="true" name="trace">
+    <Description>Used for debugging this workflow and when set to true trace
+      will be sent to stdout.</Description>
+  </Variable>
+  <Variable name="project">
+    <Description>ProvisioningProject which is just a compiled version of the ProvisioningPlan.</Description>
+  </Variable>
+  <Variable name="identityRequestId" output="true">
+    <Description>The sequence id of the Identity request object which is stored in 
+       the name field of the identity request.</Description>
+  </Variable>
+  <Variable name="cart" output="true">
+    <Description>This variable includes all ApprovalItems that are part of 
+       the request process and is updated during the AfterScript
+       of the approval process by assimilating the decisions 
+       and comments from the Approvals copy of the ApprovalItem.</Description>
+  </Variable>
+  <Variable initializer="Normal" input="true" name="workItemPriority">
+    <Description>The String version of a WorkItem.Priority. This variable is 
+       used to set the priority on all of the workitems generated 
+       as part of this workflow and also set on the IdentityRequest
+       object.</Description>
+  </Variable>
+  <Variable initializer="ref:here" input="true" name="here"/>
+  <Description>Change in an individuals IRS Status.
+
+               IRS Certified
+               IRS Failed
+               IRS Preparation
+               &lt;blank></Description>
+  <RuleLibraries>
+    <Reference class="sailpoint.object.Rule" id="8a8594824ddf1ff8014ddf2052f0012f" name="Approval Library"/>
+    <Reference class="sailpoint.object.Rule" id="8a8594824ddf1ff8014ddf2057150141" name="LCM Workflow Library"/>
+  </RuleLibraries>
+  <Step icon="Start" name="start" posX="38" posY="132">
+    <Script>
+      <Source>
+        import sailpoint.tools.Util;
+        import sailpoint.object.WorkflowCase;
+        import sailpoint.object.TaskResult;
+
+       // System.out.println("Event was fired for identity ["+identityName+"]");
+       // System.out.println("                    trigger ["+trigger.toXml()+"]");
+       // System.out.println("                    event ["+event.toXml()+"]");
+      </Source>
+    </Script>
+    <Transition to="Update Fields"/>
+  </Step>
+  <Step action="call:sendEmail" icon="Email" name="Email ACI IRS contacts" posX="285" posY="132">
+    <Arg name="template" value="ACI - IRS Status Change Email"/>
+    <Arg name="cc" value="mbox-idm-prd@aciworldwide.com,jenny.powers@aciworldwide.com"/>
+    <Arg name="to" value="string:mbox-aci-irs-comms@aciworldwide.com"/>
+    <Description>Generate an email to ACI's IRS communications mailbox</Description>
+    <Transition to="end"/>
+  </Step>
+  <Step icon="Stop" name="end" posX="421" posY="133"/>
+  <Step icon="Default" name="Update Fields" posX="146" posY="132">
+    <Script>
+      <Source>/*
+    Workflow:  ACI - IRS Status Change
+    Step:  Update Fields
+    
+    Date:  November 14, 2016
+    Version:  1.11
+*/
+import org.apache.log4j.Logger;
+import sailpoint.object.*;
+import sailpoint.aci.util.ACIUtil;
+
+Logger logger = Logger.getLogger("com.aci.wf.irsChange");
+logger.debug("ACI - IRS Status Change(Update Fields)");
+
+List changeList = new ArrayList();
+String oldIRSStatus = "";
+String oldIRSCertDate = "";
+String newIRSStatus = "";
+String newIRSCertDate = "";
+
+// Is event data available?
+if(event != null){  
+    logger.debug("    event found for " + event.getIdentityName()); 
+    Identity oldIdentity = event.getOldObject();  
+    Identity newIdentity = event.getNewObject();
+
+    if (oldIdentity !=null) {
+        oldIRSStatus= oldIdentity.getAttribute("irsStatus");
+        oldIRSCertDate= oldIdentity.getAttribute("irsCertDate"); 
+        
+        // Check to see if Status is blank
+        if ( !Util.isNotNullOrEmpty(oldIRSStatus) ) oldIRSStatus= "*blank*";
+        if ( !Util.isNotNullOrEmpty(oldIRSCertDate) ) oldIRSCertDate= "*blank*";
+        logger.debug("oldIRSStatus=" + oldIRSStatus);
+        logger.debug("oldIRSCertDate=" + oldIRSCertDate);
+    } 
+
+    if (newIdentity !=null) {
+        newIRSStatus= newIdentity.getAttribute("irsStatus");
+        newIRSCertDate= newIdentity.getAttribute("irsCertDate"); 
+        
+        // Check to see if Status is blank
+        if ( !Util.isNotNullOrEmpty(newIRSStatus) ) newIRSStatus= "*blank*";
+        if ( !Util.isNotNullOrEmpty(newIRSCertDate) ) newIRSCertDate= "*blank*";
+        logger.debug("newIRSStatus=" + newIRSStatus);
+        logger.debug("newIRSCertDate=" + newIRSCertDate);
+    }
+    
+    // IRS Status Change
+    if ( ! oldIRSStatus.equalsIgnoreCase(newIRSStatus)){
+        Map changesMap = new HashMap();
+
+        // Status Change
+        changesMap.put("description", "IRS Status");
+        changesMap.put("oldValue", oldIRSStatus);
+        changesMap.put("newValue", newIRSStatus);
+        changeList.add(changesMap); 
+    }   
+        
+    if ( ! oldIRSCertDate.equalsIgnoreCase(newIRSCertDate)){
+        Map changesMap = new HashMap();
+
+        // Certification Date Change
+        changesMap.put("description", "IRS Certification Date");
+        changesMap.put("oldValue", oldIRSCertDate);
+        changesMap.put("newValue", newIRSCertDate);
+
+        changeList.add(changesMap); 
+    }   
+
+    // Add the changes to the workflow
+    workflow.put("changeList", changeList);   
+}
+
+// 
+Identity identityObj = context.getObjectByName(Identity.class, identityName);
+
+String employeeEmail = identityObj.getEmail();
+String networkId = identityObj.getAttribute("networkId");
+String managerEmail  = identityObj.getManager().getEmail();
+String managerName  = identityObj.getManager().getDisplayName();
+String personType = identityObj.getAttribute("personType");
+String personId = identityObj.getAttribute("personId");
+String company = identityObj.getAttribute("company");
+String location = identityObj.getAttribute("location");
+String firstname = identityObj.getFirstname();
+String lastname = identityObj.getLastname();
+
+//Check if Null or empty
+if ( !Util.isNotNullOrEmpty(networkId) ) networkId = "";
+if ( !Util.isNotNullOrEmpty(employeeEmail ) ) employeeEmail = "";
+if ( !Util.isNotNullOrEmpty(company) ) company = "";
+if ( !Util.isNotNullOrEmpty(managerEmail) ) managerEmail = "";
+if ( !Util.isNotNullOrEmpty(managerName) ) managerName = "";
+if ( !Util.isNotNullOrEmpty(location) ) location = "";
+
+//  Update WFlow variables
+workflow.put("employeeEmail",employeeEmail);
+workflow.put("networkId",networkId);
+workflow.put("managerEmail",managerEmail);
+workflow.put("managerName",managerName);
+workflow.put("personType",personType);
+workflow.put("firstname",firstname);
+workflow.put("lastname",lastname);        
+workflow.put("company",company);       
+workflow.put("personId",personId);
+workflow.put("location",location);
+</Source>
+    </Script>
+    <Transition to="Email ACI IRS contacts"/>
+  </Step>
+</Workflow>
