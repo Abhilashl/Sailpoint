@@ -1,0 +1,23 @@
+/*
+    Rule:  aci_LifeCycleAuthIdentity
+    Author:  Steve Nuffer
+	
+    Date:  November 10, 2016
+    Version:  1.0
+
+*/
+import org.apache.log4j.Logger;
+import sailpoint.object.*;
+import sailpoint.tools.Util;
+
+Logger logger = Logger.getLogger("com.aci.aci_LifeCycleAuthIdentity");
+logger.debug("aci_LifeCycleJoinerFilter");
+
+if ( identity.isCorrelated() ) {
+    // New Identity and it's authoritative
+    logger.debug("    " + identity.getDisplayName() + "  Include Identity");    
+        return true;
+} 
+
+logger.debug("    " + identity.getDisplayName() + "  Exclude Identity");
+return false
