@@ -1,0 +1,17 @@
+/*
+    Rule:  aci_DeptNumber
+    
+    Author:  Steve Nuffer
+	
+    Date:  November 11, 2016
+    Version:  1.1
+
+*/
+import org.apache.log4j.Logger; 
+import sailpoint.object.*;
+import sailpoint.tools.Util;
+
+String tmpDeptNum = value.replaceAll("[^0-9]", " ");
+String deptNum = tmpDeptNum.substring(0, tmpDeptNum.indexOf(' '));
+
+return deptNum;
