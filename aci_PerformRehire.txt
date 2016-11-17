@@ -2,8 +2,8 @@
     Rule:  aci_PerformRehire
     Author:  Steve Nuffer
 	
-    Date:  October 10, 2016	
-	Version: 1.1
+    Date:  November 10, 2016	
+	Version: 1.11
 
     if (Notify Y --> N) and ( (EMP_START_DATE > CurrentDate) OR (CURRENT_EMPLOYEE_FLAG N --> Y) )
     Send Rehire
@@ -20,9 +20,15 @@ logger.debug("aci_PerformRehire");
 
 // The instanceof operator returns false if the object is null or void
 // as well as if it is a different object type.
-if (!(previousIdentity instanceof Identity) || !(newIdentity instanceof Identity)) {
+if (!(previousIdentity instanceof Identity)) {
     // New Hire or Error on newIdentity
-    logger.debug("    Identity Null");
+    logger.debug("    Previous Identity Null ");
+    return false;
+}
+
+if ( !(newIdentity instanceof Identity)) {
+    // New Hire or Error on newIdentity
+    logger.debug("    New Identity Null");
     return false;
 }
 

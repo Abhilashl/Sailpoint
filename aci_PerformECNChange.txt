@@ -2,8 +2,8 @@
     Rule:  aci_PerformECNChange
     Author:  Steve Nuffer
 	
-    Date:  November 8, 2016	
-    Version: 1.4
+    Date:  November 11, 2016	
+    Version: 1.42
     
     If ( Change Dept, Location, Department #, Title) AND (CURRENT_EMPLOYEE_FLAG Y --> Y)
         Send ECN
@@ -19,67 +19,76 @@ boolean performLCM = false;
 
 // The instanceof operator returns false if the object is null or void
 // as well as if it is a different object type.
-if (!(previousIdentity instanceof Identity) || !(newIdentity instanceof Identity)) {
+if (!(previousIdentity instanceof Identity) ){
     // New Hire or Error on newIdentity
-    logger.debug("    Identity Null");
+    logger.debug("    Previous Identity Null ");
+    return false;
+}
+
+if ( !(newIdentity instanceof Identity)) {
+    // New Hire or Error on newIdentity
+    logger.debug("    New Identity Null");
     return false;
 }
 
 // Exit if this is this a Hire or Rehire
 if ( previousIdentity.isInactive() || newIdentity.isInactive() ) {
-    // Hire or Rehire
-    return false;
-}
-
-// Identity is not from an authoritative source
-if ( ! newIdentity.isCorrelated() ) {
-    logger.debug("    Not authoritative identity");
+    // Rehire and Hire
+    logger.debug("    Rehire or Hire");
     return false;
 }
 
 String identityPersonID = newIdentity.getAttribute("personId");
 logger.debug("    PERSON_ID=" + identityPersonID);
 
+// Location
 String oldLocation = previousIdentity.getAttribute("location");
 String newLocation = newIdentity.getAttribute("location");
-String oldemployeeTitle = previousIdentity.getAttribute("employeeTitle");
-String newemployeeTitle = newIdentity.getAttribute("employeeTitle");
-String oldManager = "";
-String newManager = "";
-String oldManagerPersonID = "";
-String newManagerPersonID = "";
-
-// Use Dept Number not DeptName
-String oldDeptName = previousIdentity.getAttribute("DEPT_NAME");
-String tmpDeptNum = oldDeptName.replaceAll("[^0-9]", " ");
-String oldDeptNum = tmpDeptNum.substring(0, tmpDeptNum.indexOf(' '));
-
-String newDeptName = newIdentity.getAttribute("DEPT_NAME");
-tmpDeptNum = newDeptName.replaceAll("[^0-9]", " ");
-String newDeptNum = tmpDeptNum.substring(0, tmpDeptNum.indexOf(' '));
-
-//Not all authoritative identities have managers
-try {
-    oldManager = previousIdentity.getManager().getDisplayName();
-    newManager = newIdentity.getManager().getDisplayName();
-    oldManagerPersonID = previousIdentity.getManager().getAttribute("personId");
-    newManagerPersonID = newIdentity.getManager().getAttribute("personId");
-} catch ( Exception e ) {
-    oldManager = "";
-    newManager = "";
-    oldManagerPersonID = "";
-    newManagerPersonID = "";
-} 
-
-// Check for Null or empty
 if ( !Util.isNotNullOrEmpty(oldLocation) ) oldLocation = "";
 if ( !Util.isNotNullOrEmpty(newLocation) ) newLocation = "";
-if ( !Util.isNotNullOrEmpty(oldDeptName) ) oldDeptName = "";
-if ( !Util.isNotNullOrEmpty(newDeptName) ) newDeptName = "";
-if ( !Util.isNotNullOrEmpty(oldDeptNum ) ) oldDeptNum = "";
-if ( !Util.isNotNullOrEmpty(newDeptNum ) ) newDeptNum = "";
+
+// Title
+String oldemployeeTitle = previousIdentity.getAttribute("employeeTitle");
+String newemployeeTitle = newIdentity.getAttribute("employeeTitle");
 if ( !Util.isNotNullOrEmpty(oldemployeeTitle) ) oldemployeeTitle = "";
 if ( !Util.isNotNullOrEmpty(newemployeeTitle) ) newemployeeTitle = "";
+
+// Previous Department Number
+String oldDeptName = previousIdentity.getAttribute("DEPT_NAME");
+String oldDeptNum = "";
+if ( Util.isNotNullOrEmpty(oldDeptName) ) {
+    String tmpDeptNum = oldDeptName.replaceAll("[^0-9]", " ");
+    oldDeptNum = tmpDeptNum.substring(0, tmpDeptNum.indexOf(' '));
+} 
+logger.debug("    oldDeptNum=" + oldDeptNum);
+
+// New Department Number
+String newDeptName = newIdentity.getAttribute("DEPT_NAME");
+String newDeptNum = "";   
+if ( Util.isNotNullOrEmpty(newDeptName) ) {
+    String tmpDeptNum = newDeptName.replaceAll("[^0-9]", " ");
+    newDeptNum = tmpDeptNum.substring(0, tmpDeptNum.indexOf(' '));
+} 
+logger.debug("    newDeptNum=" + newDeptNum);
+
+// Previous Manager
+String oldManager = "";
+String oldManagerPersonID = "";
+Identity oldIdentityObjMgr = previousIdentity.getManager();
+if ( oldIdentityObjMgr instanceof Identity ) {
+    oldManager = oldIdentityObjMgr.getDisplayName();
+    oldManagerPersonID = oldIdentityObjMgr.getAttribute("personId");
+}
+
+// New Manager
+String newManager = "";
+String newManagerPersonID = "";
+Identity newIdentityObjMgr = newIdentity.getManager();
+if ( newIdentityObjMgr instanceof Identity ) {
+    newManager = newIdentityObjMgr.getDisplayName();
+    newManagerPersonID = newIdentityObjMgr.getAttribute("personId");
+}
+
 if ( !Util.isNotNullOrEmpty(oldManager) ) oldManager = "";
 if ( !Util.isNotNullOrEmpty(newManager) ) newManager = "";
 if ( !Util.isNotNullOrEmpty(oldManagerPersonID ) ) oldManagerPersonID = "";
