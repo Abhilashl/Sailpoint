@@ -1,6 +1,6 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <!DOCTYPE Workflow PUBLIC "sailpoint.dtd" "sailpoint.dtd">
-<Workflow created="1469134957985" explicitTransitions="true" id="8a8596e455ee952a01560f446da10776" modified="1470754413301" name="ACI - Fusion Joiner" type="IdentityLifecycle">
+<Workflow created="1469134957985" explicitTransitions="true" id="8a8596e455ee952a01560f446da10776" modified="1479242100628" name="ACI - Fusion Joiner" type="IdentityLifecycle">
   <Variable initializer="true" input="true" name="trace"/>
   <Variable input="true" name="identityName">
     <Description>The name of the identity.</Description>
@@ -28,16 +28,24 @@ completes the request.</Description>
   <Variable name="plan">
     <Description>The provisioning plan, which is built by a service method.</Description>
   </Variable>
+  <Variable initializer="false" input="true" name="managerEmailOnly">
+    <Description>If set to true, then it will bypass provisioning and send emails to manager.</Description>
+  </Variable>
+  <Variable initializer="false" input="true" name="RemedyForceTicketOnly">
+    <Description>If set to true, then it will bypass provisioning and emails to manager.
+
+This will only create RemedyForce tickets.</Description>
+  </Variable>
   <RuleLibraries>
     <Reference class="sailpoint.object.Rule" id="8a8596e4537c17b50153cdda16d3129a" name="aci_Library"/>
   </RuleLibraries>
   <Step icon="Start" name="Start" posX="33" posY="213" wait="1">
     <Transition to="Update Fields"/>
   </Step>
-  <Step icon="Task" name="Update Fields" posX="133" posY="214" resultVariable="complete">
+  <Step icon="Task" name="Update Fields" posX="116" posY="213" resultVariable="complete">
     <Script>
       <Source>/*
-    Workflow:  ACI - Fusion Joiner
+    Workflow:  ACI - Fusion New Hire Request
     Step:  Update Fields
 
     Date:  July 20, 2016
@@ -46,6 +54,12 @@ completes the request.</Description>
  */
 import org.apache.log4j.Logger;
 import sailpoint.object.*;
+//import java.sql.Connection;  
+//import java.sql.DriverManager;  
+//import java.sql.PreparedStatement;  
+//import java.sql.ResultSet;  
+//import java.sql.SQLException;  
+//import java.sql.Statement;  
 
 Logger  logger = Logger.getLogger("com.aci.wf.joiner");
 
@@ -86,8 +100,8 @@ return true;</Source>
     <Transition to="Create Account Request" when="complete == true"/>
     <Transition to="Stop" when="complete == false"/>
   </Step>
-  <Step icon="Stop" name="Stop" posX="199" posY="362"/>
-  <Step icon="Message" name="Create Account Request" posX="304" posY="210" resultVariable="plan">
+  <Step icon="Stop" name="Stop" posX="181" posY="360"/>
+  <Step icon="Message" name="Create Account Request" posX="261" posY="209" resultVariable="plan">
     <Description>Process the user that joined and create plan for the user.
 Create birthright accounts</Description>
     <Script>
@@ -95,8 +109,10 @@ Create birthright accounts</Description>
     Workflow:  ACI - Fusion Joiner
     Step:  Create Account Request
     
-    Date:  July 20, 2016
-    Version:  1.1
+    DEV/UAT versus PRD
+
+    Date:  November 15, 2016
+    Version:  1.3
 */
 import sailpoint.object.*;
 import sailpoint.api.*;
@@ -199,17 +215,18 @@ logger.debug("\tidentityPerType=" + identityPerType.toLowerCase());
 *************************************************************************************/
 logger.debug("\tBirthright Applications");
 String appSForce = "TST Salesforce";
-String sfuser = identityEmail;
+String sfuser = identityEmail + "test.full"; // DEV UAT
+//String sfuser = identityEmail; // PRD
 
 String appWebex = "DEV Webex";
 String webexUser = identityEmail;
 String policyWebexName = "WebexPasswordPolicy";
 
 String appClarity = "TST Clarity";
-String appSourceOfRecord = "UAT Fusion HCM";
+String appSourceOfRecord = "DEV Fusion HCM";
 
-String appPrimaryAD= "UAT Active Directory tst.aciww.com"; 
-String baseDSN = "OU=Dev,DC=tst,DC=aciww,DC=com";
+String appPrimaryAD= "DEV Active Directory tst.aciww.com"; 
+String baseDSN = "OU=Dev,DC=tst,DC=aciww,DC=com"; // DEV UAT
 String policyADName = "AD Password Policy";
 String sAMAccountName = newNetworkId;
 
@@ -291,33 +308,17 @@ switch (identityPerType.toLowerCase()) {
      
         // Set Manager
         //
-        logger.debug("\tSet Manager");       
-        if ( managerObj != null ) {
-            String mgrDN = "";
+        logger.debug("\tSet Manager");
+        Link mgrLink = getMgrLink(managerObj,appPrimaryAD);
+        
+        if ( mgrLink != null ) {
+            String mgrDN = mgrLink.getNativeIdentity();
 
-            List mgrLinkLists = managerObj.getLinks();
-            
-            if ( null != mgrLinkLists) {
-                for ( Link mgrLink : mgrLinkLists ) {
-                    String mgrApp = mgrLink.getApplication().getName();
-                    logger.debug("mgrApp=" + mgrApp );
-
-                    String mgrAcctType = mgrLink.getAttribute("accountType");
-                    
-                    // Check for the correct Link and if this is their personal-primary account
-                    //if ( mgrApp.equalsIgnoreCase(appPrimaryAD) &amp;&amp; "personal-primary".equalsIgnoreCase(mgrAcctType))  {
-                    if ( mgrApp.toLowerCase().contains("tsacorp.com") &amp;&amp; "personal-primary".equalsIgnoreCase(mgrAcctType))  {
-                        logger.debug("AD Manager Found");
-                        mgrDN = mgrLink.getNativeIdentity();
-                        break;
-                    }
-                }
-            }
             // Check to see if empty
             if ( Util.isNotNullOrEmpty(mgrDN) )
                 acctReq.add(new AttributeRequest("manager",ProvisioningPlan.Operation.Add,mgrDN));
         }
-        
+                    
         // Generate password
         //
         logger.debug("\tGenerate password");       
@@ -397,29 +398,13 @@ switch (identityPerType.toLowerCase()) {
         
         // Set Manager
         //
-        if ( managerObj != null ) {
-            String mgrEmail = "";
-
-            List mgrLinkLists = managerObj.getLinks();
-
-            if ( null != mgrLinkLists) {
-                for ( Link mgrLink : mgrLinkLists ) {
-                    String mgrApp = mgrLink.getApplication().getName();
-                    String mgrAcctType = mgrLink.getAttribute("accountType");
-                    
-                    logger.debug("MgrApp=" + mgrApp + "  mgrAcctType=" + mgrAcctType);
-                    
-                    // Check for the correct Link and if this is their personal-primary account
-                    //if ( mgrApp.equalsIgnoreCase(appSForce) &amp;&amp; "personal-primary".equalsIgnoreCase(mgrAcctType))  {
-                    if ( mgrApp.equalsIgnoreCase(appSForce) &amp;&amp; mgrAcctType.toLowerCase().contains("personal"))  {
-                        // Use Email from Sforce because of ".full"
-                        logger.debug("Found the correct one");
-                        mgrEmail = mgrLink.getAttribute("email");
-                        mgrId = mgrLink.getAttribute("Id");
-                        break;
-                    }
-                }
-            }
+        logger.debug("\tSet Manager");
+        Link mgrLink = getMgrLink(managerObj,appPrimaryAD);
+        
+        if ( mgrLink != null ) {
+        
+            String mgrEmail = mgrLink.getAttribute("email");
+            String mgrId = mgrLink.getAttribute("Id");
 
             // Check to see if mgrEmail is empty
             if ( Util.isNotNullOrEmpty(mgrEmail) ) 
@@ -428,6 +413,7 @@ switch (identityPerType.toLowerCase()) {
             if ( Util.isNotNullOrEmpty(mgrId) ) 
                 sfReq.add(new AttributeRequest("ManagerId",ProvisioningPlan.Operation.Add,mgrId));
         }
+   
         // Add Workflow Variables
         workflow.put("sfusername", sfuser);
   
@@ -446,6 +432,7 @@ switch (identityPerType.toLowerCase()) {
 
 return plan;</Source>
     </Script>
+    <Transition to="Notify Manager" when="managerEmailOnly.equalsIgnoreCase(&quot;true&quot;)"/>
     <Transition to="Notify Remedyforce"/>
   </Step>
   <Step action="call:provisionProject" icon="Provision" monitored="true" name="Provision" posX="636" posY="210">
@@ -454,12 +441,14 @@ return plan;</Source>
     <Description>Provision the project.</Description>
     <Transition to="Refresh Identity"/>
   </Step>
-  <Step icon="Default" name="Check For Errors" posX="860" posY="210" resultVariable="hasADErrors">
+  <Step icon="Default" name="Check For Errors" posX="861" posY="210" resultVariable="hasADErrors">
     <Script>
       <Source>/*
-    Workflow:  ACI - Fusion Joiner
+    Workflow:  ACI - Fusion New Hire Request
     Step:  CheckForErrors
     
+    DEV/UAT and PRD
+
     Date:  July 20, 2016
     Version:  1.1
 */
@@ -490,68 +479,95 @@ boolean  failedStatus =  false;
 if(prvPlans!=null){
 //checking if the provisioning status is completed or failed.
 //Checking the result status first at provisioning plan level then at account request level and finally at attribute request level to make sure that there is no error lost.
-for (ProvisioningPlan pl: prvPlans) {
-	if(pl.getAccountRequest("IIQ")==null){
-		if(pl.getApplicationNames()!=null){
-			ProvisioningResult result = null;
-			if(pl.getAccountRequests()!=null){
-			
-				if(pl.getAccountRequests().get(0).getResult()!=null){
-					result = pl.getAccountRequests().get(0).getResult();
-				}
-			}
-			
-			if(pl.getResult()!=null){
-				result = pl.getResult();
-			}
+    for (ProvisioningPlan pl: prvPlans) {
+        if(pl.getAccountRequest("IIQ")==null){
+            logger.debug("1");
+            if(pl.getApplicationNames()!=null){
+                logger.debug("2");
+                ProvisioningResult result = null;
+                if(pl.getAccountRequests()!=null){
+                    logger.debug("3");
+                
+                    if(pl.getAccountRequests().get(0).getResult()!=null){
+                        logger.debug("4");
+                        result = pl.getAccountRequests().get(0).getResult();
+                    } else
+                        logger.debug("4 else");
+                } else
+                    logger.debug("3 else");
+                
+                if(pl.getResult()!=null){
+                    logger.debug("5");
+                    result = pl.getResult();
+                } else
+                    logger.debug("5 else");
 
-			if(result!=null){
-				if((result.getStatus()!=null) &amp;&amp; !(result.getStatus().equalsIgnoreCase("committed"))){
-					String appError = pl.getApplicationNames().toString();
-					if(result.getErrors()!=null){
-						appError = appError + " Error : " + result.getErrors().toString();
-					}
-					              
-					failedApps.add(appError);
-					failedStatus =true;
-				}
-				else{	
-					boolean noerrrorfound = true;
-					List attreqlist = pl.getAccountRequests().get(0).getAttributeRequests();
-					if(attreqlist!=null){
-						 for(AttributeRequest attreq :attreqlist){
-							 if(attreq.getResult()!=null){
-								 attrresult= attreq.getResult().getStatus();
-								 if(!(attrresult.equalsIgnoreCase("committed"))){
-									String attrError = pl.getApplicationNames().toString();
-									if(attreq.getResult().getErrors()!=null){
-										attrError = attrError + " Error : " + attreq.getResult().getErrors().toString();
-									}
-									failedApps.add(attrError);
-									failedStatus =true;
-									logger.debug("Error --"+appError);
-									noerrrorfound=false;
-								 }
-							}
-						}
-					}
-					if(pl.getResult()!=null){
-						if(pl.getResult().getErrors()!=null){
-							String prvError= pl.getApplicationNames().toString();
-							prvError = prvError + " Error : " + pl.getResult().getErrors().toString();
-							failedApps.add(prvError);
-							failedStatus =true;
-							noerrrorfound=false;
-						}
-					} 
-					if(noerrrorfound){
-						successApps.add(pl.getApplicationNames().get(0));
-					}
-				}
-			}
-		}
-	}
-}
+                if(result!=null){
+                    logger.debug("6");
+                    if((result.getStatus()!=null) &amp;&amp; !(result.getStatus().equalsIgnoreCase("committed"))){
+                        logger.debug("7");
+                        String appError = pl.getApplicationNames().toString();
+                        if(result.getErrors()!=null){
+                            logger.debug("8");
+                            appError = appError + " Error : " + result.getErrors().toString();
+                        } else 
+                            logger.debug("8 else");
+                                      
+                        failedApps.add(appError);
+                        failedStatus = true;
+                    } else {
+                        logger.debug("7 else");
+                        boolean noerrrorfound = true;
+                        List attreqlist = pl.getAccountRequests().get(0).getAttributeRequests();
+                        if(attreqlist!=null){
+                            
+                            for(AttributeRequest attreq :attreqlist){
+                                if(attreq.getResult()!=null){
+                                    logger.debug("9");
+                                    attrresult= attreq.getResult().getStatus();
+                                    if(!(attrresult.equalsIgnoreCase("committed"))){
+                                        logger.debug("10");
+                                        String attrError = pl.getApplicationNames().toString();
+                                        if(attreq.getResult().getErrors()!=null){
+                                            attrError = attrError + " Error : " + attreq.getResult().getErrors().toString();
+                                        }
+                                        failedApps.add(attrError);
+                                        failedStatus = true;
+                                        logger.debug("Error --"+appError);
+                                        noerrrorfound=false;
+                                     } else
+                                        logger.debug("10 else");
+                                } else
+                                    logger.debug("9 else");
+                            }
+                        }
+                        if(pl.getResult()!=null){
+                            logger.debug("11");
+                            if(pl.getResult().getErrors()!=null){
+                                logger.debug("12");
+                                String prvError= pl.getApplicationNames().toString();
+                                prvError = prvError + " Error : " + pl.getResult().getErrors().toString();
+                                failedApps.add(prvError);
+                                failedStatus = true;
+                                noerrrorfound = false;
+                            } else
+                                logger.debug("12 else");
+                        } else
+                            logger.debug("11 else");
+                        
+                        if(noerrrorfound){
+                            logger.debug("12");
+                            successApps.add(pl.getApplicationNames().get(0));
+                        } else
+                            logger.debug("12 else");
+                    }
+                } else
+                    logger.debug("6 else");
+            } else
+                logger.debug("2 else");
+        } else
+            logger.debug("1 else");
+    }
 }
 SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMddHHmmss");
 Calendar cur_time = Calendar.getInstance();
@@ -561,20 +577,30 @@ context.startTransaction();
 
 if(failedStatus){
 	logger.debug("+++++++++++++  -  Error: Failed to Provision with error :"+ prvError + "     +++++++++++++++++++++");
-
 }
 
+// Continue to Manager Notification
+logger.debug("Errors done");
+//return false;
+
 //return failedStatus;
-String sfApp = "TST Salesforce";
+/*TEST
+String sfApp = "PRD Salesforce";
 if ( !successApps.contains(sfApp) ) {
 workflow.put("sfusername","");
 }
+*/
+
 //Check if AD failed 
+//String srcApp = "PRD Active Directory am.tsacorp.com";
 String srcApp = "DEV Active Directory tst.aciww.com";
+
 if ( successApps.contains(srcApp) ) {
-	return false;
+    logger.debug("Return false");
+    return false;
 }else {
-	return true;
+    logger.debug("Return true");
+    return true;
 }	
 	</Source>
     </Script>
@@ -618,7 +644,7 @@ context.sendEmailNotification(et, options);
     </Script>
     <Transition to="Stop"/>
   </Step>
-  <Step action="call:compileProvisioningProject" name="Compile Project" posX="536" posY="211" resultVariable="project">
+  <Step action="call:compileProvisioningProject" name="Compile Project" posX="540" posY="210" resultVariable="project">
     <Arg name="requester" value="string:spadmin"/>
     <Arg name="requireCreateTemplates" value="string:false"/>
     <Arg name="identityName" value="ref:identityName"/>
@@ -636,16 +662,17 @@ You can also pass things into the Template and Field scripts by
 defining Args in this step.</Description>
     <Transition to="Provision"/>
   </Step>
-  <Step action="call:sendEmail" configForm="Provisioning Notification Step Form" icon="Email" name="Notify Remedyforce" posX="422" posY="211">
+  <Step action="call:sendEmail" configForm="Provisioning Notification Step Form" icon="Email" name="Notify Remedyforce" posX="405" posY="274">
     <Arg name="cc" value="mbox-idm-prd@aciworldwide.com"/>
     <Arg name="template" value="ACI - RemedyForce Joiner Email"/>
     <Arg name="identityName" value="ref:identityName"/>
     <Arg name="to" value="mbox-aci-desk@aciworldwide.com"/>
     <Arg name="plan" value="ref:plan"/>
     <Description>Create a Incident Ticket in Remedyforce</Description>
+    <Transition to="Stop" when="company.equalsIgnoreCase(&quot;fiserv&quot;)  || RemedyForceTicketOnly.equalsIgnoreCase(&quot;true&quot;)"/>
     <Transition to="Compile Project"/>
   </Step>
-  <Step action="call:sendEmail" icon="Email" name="Notify Manager" posX="1051" posY="206">
+  <Step action="call:sendEmail" icon="Email" name="Notify Manager" posX="918" posY="77">
     <Arg name="template" value="string:ACI - New Joiner Mgr Account"/>
     <Arg name="cc" value="ref:managerEmail"/>
     <Arg name="country" value="ref:country"/>
@@ -672,7 +699,7 @@ defining Args in this step.</Description>
         </Description>
     <Transition to="Notify Password to Manager"/>
   </Step>
-  <Step action="call:sendEmail" configForm="Provisioning Notification Step Form" icon="Email" name="Notify Password to Manager" posX="1053" posY="445">
+  <Step action="call:sendEmail" configForm="Provisioning Notification Step Form" icon="Email" name="Notify Password to Manager" posX="1021" posY="430">
     <Arg name="template" value="string:ACI - New Joiner Mgr Password"/>
     <Arg name="cc" value="mbox-idm-prd@aciworldwide.com"/>
     <Arg name="identityDisplayName" value="ref:identityDisplayName"/>
