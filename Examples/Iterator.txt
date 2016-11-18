@@ -1,0 +1,46 @@
+https://community.sailpoint.com/thread/14284
+
+<Source>  
+    <![CDATA[  
+        import java.util.ArrayList;  
+        import java.util.Iterator;  
+        import java.util.Date;  
+        import java.util.List;  
+  
+        import sailpoint.api.SailPointContext;  
+        import sailpoint.object.Attributes;  
+        import sailpoint.object.Filter;  
+        import sailpoint.object.IdentitySnapshot;  
+        import sailpoint.object.QueryOptions;  
+        import sailpoint.tools.GeneralException;  
+                                           
+        List columns= new ArrayList();   
+        columns.add("created");   
+        columns.add("summary");   
+        columns.add("applications");   
+        columns.add("attributes");   
+        QueryOptions ops = new QueryOptions();   
+        ops.add(new Filter[] {Filter.eq("identityName", "214")});   
+        ops.setOrderBy("created");   
+        ops.setOrderAscending(false);   
+        Iterator result = context.search(IdentitySnapshot.class, ops, columns);   
+        if(result != null) {       
+            while (result.hasNext()){   
+            Object[] row = (Object[])result.next();   
+            System.out.println("Snapshot created "+(Date)row[0]) ;   
+            System.out.println("Snapshot Summary"+(String)row[1]) ;   
+            System.out.println("Snapshot Applications"+(String)row[2]) ;   
+            System.out.println("Snapshot Attributes "+row[3]) ;   
+            Object attrObj = row[3];   
+                if(null != attrObj ){   
+                    Attributes attr = (Attributes) row[3];   
+                    String userStatus = attr.getString("userstatus");  
+                    if(null != userStatus && userStatus.equalsIgnoreCase("Contractor")){   
+                    // your requirment related logic   
+                    }   
+                }   
+            }   
+        }   
+         
+      ]]>  
+    </Source> 
