@@ -2,8 +2,8 @@
     Workflow:  ACI - Fusion Leaver
     Step:  Notify HR and Manager
     
-    Date:  August 11, 2016
-    Version:  1.0
+    Date:  November 18, 2016
+    Version:  1.2
 */
 
 import java.util.ArrayList; 
@@ -12,15 +12,27 @@ import sailpoint.tools.Message;
 import sailpoint.object.EmailOptions;
 import sailpoint.object.EmailTemplate;
 import sailpoint.api.*;
+import org.apache.log4j.Logger;
+
+Logger  logger = Logger.getLogger("com.aci.wf.leaver");
+logger.debug("ACI - Fusion Leaver(Notify HR and Manager)");
 
 //Send notification
 EmailOptions options = new EmailOptions();
-
 EmailTemplate emailTemplate = context.getObjectByName(EmailTemplate.class, "ACI - Leaver Mgr Account");
 
+// Add Vendor Mgmt for contingents only
+String sendCc = "mbox-idm-prd@aciworldwide.com,jenny.powers@aciworldwide.com,julie.moritz@aciworldwide.com";
+
+if ( personType.toLowerCase().contains("contingent") ) 
+    sendCc = managerEmail +",mbox-vm-contractors@aciworldwide.com";
+else
+    sendCc = managerEmail;
+    
 emailTemplate.setTo( hrEmail );
-emailTemplate.setCc( managerEmail );
+emailTemplate.setCc( sendCc );
 emailTemplate.setBcc( "mbox-idm-prd@aciworldwide.com" );
+emailTemplate.setSubject( "Termination Processed - " + lastname + ", " + firstname );
 
 options.setSendImmediate(true);
 options.setNoRetry(true);
@@ -38,6 +50,7 @@ options.setVariable("termDate", termDate);
 options.setVariable("list", applist);
 context.sendEmailNotification( emailTemplate, options);
 
+/*
 if ( sendLdapNotification!=null && sendLdapNotification.equals("true") ) {
 	//Send ldap notification 
 	EmailTemplate ldapEmailTemplate  = context.getObjectByName(EmailTemplate.class, "ACI - LDAP Disable Account");
@@ -50,4 +63,4 @@ if ( sendLdapNotification!=null && sendLdapNotification.equals("true") ) {
 	EmailOptions options = new EmailOptions(ObjectUtil.getEffectiveEmails(this.context, workgroup), ldapMap);
 	context.sendEmailNotification( ldapEmailTemplate  , options );
 }
-		
+*/		

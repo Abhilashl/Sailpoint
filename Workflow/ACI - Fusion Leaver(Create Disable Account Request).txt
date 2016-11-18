@@ -2,8 +2,8 @@
     Workflow:  ACI - Fusion Leaver
     Step:  Create Disable Account Request
     
-    Date:  August 11, 2016
-    Version:  1.0
+    Date:  November 10, 2016
+    Version:  1.22
 */
 
 import org.apache.log4j.Logger;
@@ -74,11 +74,12 @@ if (plan==null) plan=new ProvisioningPlan();
             String acctName = link.getNativeIdentity();
             String appConnectorType = link.getApplication().getConnector();
             boolean isAppAuth = link.getApplication().isAuthoritative();
-                                   
-            AccountRequest acctReq = new AccountRequest();
-            acctReq.setNativeIdentity(acctName);
-            acctReq.setApplication(appName);
-            acctReq.setOperation(AccountRequest.Operation.Disable);
+              
+            //  Need to move because NIS and Clarity Issues
+            //AccountRequest acctReq = new AccountRequest();
+            //acctReq.setNativeIdentity(acctName);
+            //acctReq.setApplication(appName);
+            //acctReq.setOperation(AccountRequest.Operation.Disable);
             
             //Check if the application can use an account Request
             
@@ -87,8 +88,22 @@ if (plan==null) plan=new ProvisioningPlan();
                 //**************************************************************************
                 //*****  Active Directory
                 case "sailpoint.connector.ADLDAPConnector":
+                    
+                    String acctDistName = link.getAttribute("distinguishedName");
+                    
+                    AccountRequest acctReq = new AccountRequest();
+                    acctReq.setNativeIdentity(acctName);
+                    acctReq.setApplication(appName);
+                    acctReq.setOperation(AccountRequest.Operation.Disable);
+                    
                     // Set Application Attribute
                     acctReq.add(new AttributeRequest("description", ProvisioningPlan.Operation.Set, "IIQ leaver:  "+dateFormatter.format(now) ));
+                    
+                    //Move to Disabled OU
+                    String disabledOU = "OU=Users,OU=Disabled," + acctDistName.substring(acctDistName.indexOf("DC=",0), acctDistName.length() );
+                    acctReq.add(new AttributeRequest("AC_NewParent",ProvisioningPlan.Operation.Set, disabledOU)); 
+                    plan.add(acctReq);
+                    
                     int dcindex = acctName.indexOf("DC=");
                     String domain = acctName.substring(dcindex+3, acctName.indexOf(",", dcindex) );
                         
@@ -96,18 +111,17 @@ if (plan==null) plan=new ProvisioningPlan();
                     map.put("account", domain+"\\" + link.getAttribute("sAMAccountName"));
                     map.put("info", "Network ID");
                     applist.add(map);  
-                    break;
-                //**************************************************************************
-                //*****  Webex
-                case "sailpoint.connector.ForceConnector":
-                    map.put("name", appName);
-                    map.put("account", acctName);
-                    map.put("info", "Single Sign On (SSO)");
-                    applist.add(map);  
-                    break;                    
+                    break;                 
                 //**************************************************************************
                 //*****  Salesforce
                 case "sailpoint.connector.ForceConnector":
+                
+                    AccountRequest acctReq = new AccountRequest();
+                    acctReq.setNativeIdentity(acctName);
+                    acctReq.setApplication(appName);
+                    acctReq.setOperation(AccountRequest.Operation.Disable);
+                    plan.add(acctReq); 
+
                     map.put("name", appName);
                     map.put("account", acctName);
                     map.put("info", "Single Sign On (SSO)");
@@ -120,11 +134,16 @@ if (plan==null) plan=new ProvisioningPlan();
                     map.put("account", acctName);
                     
                     // Check the specific name of the Application
-                    if (appName.toLowerCase().contains("clarity") {
+                    if (appName.toLowerCase().contains("clarity") ) {
                         //Clarity
                         map.put("info", "Single Sign On (SSO)");
-                    } else if (appName.toLowerCase().contains("webex")) {
+                    } else if (appName.toLowerCase().contains("webex") ) {
                         //Webex
+                        AccountRequest acctReq = new AccountRequest();
+                        acctReq.setNativeIdentity(acctName);
+                        acctReq.setApplication(appName);
+                        acctReq.setOperation(AccountRequest.Operation.Disable);
+                        plan.add(acctReq);
                         map.put("info", "Single Sign On (SSO)");
                     } else {
                         //Other (NIS)
@@ -174,7 +193,8 @@ if (plan==null) plan=new ProvisioningPlan();
             }
             
             // Add the Application and Account to the List
-            plan.add(acctReq);   
+            // Need to move because NIS and Clarity Issues
+            //plan.add(acctReq);   
         }          
     }
 
@@ -191,12 +211,29 @@ workflow.put("plan", plan);
 workflow.put("firstname", identityObj.getFirstname());
 workflow.put("lastname", identityObj.getLastname());
 workflow.put("employeeEmail", identityObj.email);
+workflow.put("networkId", identityObj.getAttribute("networkId"));
 workflow.put("employeeTitle", identityObj.getAttribute("employeeTitle"));
 workflow.put("personType", identityObj.getAttribute("personType"));
 workflow.put("department", identityObj.getAttribute("DEPT_NAME"));
 workflow.put("location", identityObj.getAttribute("location"));
 workflow.put("country", identityObj.getAttribute("country"));
+workflow.put("company", identityObj.getAttribute("company"));
 workflow.put("termDate", termDate);
 workflow.put("sendLdapNotification", sendLdapNotification);
+
+// IRS Certified?
+String identityIRSStatus = identityObj.getAttribute("irsStatus");
+String identityIRSCertDate = identityObj.getAttribute("irsCertDate");
+if ( !Util.isNotNullOrEmpty(identityIRSCertDate) ) identityIRSCertDate = "None"; 
+
+if ("IRS Certified".equalsIgnoreCase(identityIRSStatus) || "IRS Preparation".equalsIgnoreCase(identityIRSStatus) ) {
+    // Notify ACI IRS - Have or preparing for IRS Access
+    workflow.put("irsStatus", identityIRSStatus);
+    workflow.put("irsCertDate", identityIRSCertDate);
+    workflow.put("notifyACIIRS",true);
+} else {
+    // No IRS affiliation
+    workflow.put("notifyACIIRS",false);
+}
 
 return plan;
