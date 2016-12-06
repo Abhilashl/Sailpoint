@@ -2,8 +2,8 @@
     Workflow:  ACI - Fusion ECN Change RemedyForce
     Step:  Update Fields
     
-    Date:  August 31, 2016
-    Version:  1.12
+    Date:  December 6, 2016
+    Version:  1.2
 */
 import org.apache.log4j.Logger;
 import sailpoint.object.*;
@@ -105,6 +105,8 @@ String company = identityObj.getAttribute("company");
 String location = identityObj.getAttribute("location");
 String firstname = identityObj.getFirstname();
 String lastname = identityObj.getLastname();
+String irsStatus = identityObj.getAttribute("irsStatus");
+String irsCertDate = identityObj.getAttribute("irsCertDate");
 
 //Check if Null or empty
 if ( !Util.isNotNullOrEmpty(networkId) ) networkId = "";
@@ -113,7 +115,8 @@ if ( !Util.isNotNullOrEmpty(company) ) company = "";
 if ( !Util.isNotNullOrEmpty(managerEmail) ) managerEmail = "";
 if ( !Util.isNotNullOrEmpty(managerName) ) managerName = "";
 if ( !Util.isNotNullOrEmpty(location) ) location = "";
-
+if ( !Util.isNotNullOrEmpty(irsStatus) ) irsStatus = "";
+if ( !Util.isNotNullOrEmpty(irsCertDate) ) irsCertDate = "";
 
 //  Update WFlow variables
 workflow.put("employeeEmail",employeeEmail);
@@ -127,3 +130,14 @@ workflow.put("company",company);
 workflow.put("personId",personId);
 workflow.put("location",location);
 workflow.put("effectiveDate",effectiveDate);
+workflow.put("irsStatus", irsStatus);
+workflow.put("irsCertDate", irsCertDate);
+
+// IRS Certified?
+if ("IRS Certified".equalsIgnoreCase(irsStatus) || "IRS Preparation".equalsIgnoreCase(irsStatus) ) {
+    // Notfiy ACI IRS - Have or preparing for IRS Access
+    return true;
+} else {
+    // No IRS affiliation
+    return false;
+}
