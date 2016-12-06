@@ -1,6 +1,6 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <!DOCTYPE EmailTemplate PUBLIC "sailpoint.dtd" "sailpoint.dtd">
-<EmailTemplate created="1471448111909" id="8a8596e456940aa9015699245b25015c" modified="1472650804989" name="ACI - RemedyForce ECN Change Email">
+<EmailTemplate created="1471448111909" id="8a8596e456940aa9015699245b25015c" modified="1478791183973" name="ACI - RemedyForce ECN Change Email">
   <Body>    
 &lt;html>
 &lt;pre>
@@ -12,7 +12,12 @@
 #end 
 #if ($company) 
     Company:     $company
-#end        
+#end
+    
+#if ($irsStatus)
+    IRS Status:  $irsStatus
+    IRS Certification Date:  $irsCertDate
+#end
 &lt;br>
     Manager:        $managerName
     Manager Email:  $managerEmail

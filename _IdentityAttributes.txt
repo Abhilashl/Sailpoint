@@ -2,8 +2,8 @@
     Rule:  _IdentityAttributes
     Author:  Steve Nuffer
     
-    Date:  August 25, 2016	
-	Version: 1.2
+    Date:  December 3, 2016	
+	Version: 1.3
 
 */
 import org.apache.log4j.Logger; 
@@ -35,7 +35,7 @@ System.out.println("****************  Identities  ****************\n");
  
 //Print to a file
 //  Printer header to CSV file
-fileWriter.println("identityCreated!identityAuth!idendityPersonID!identitytName!identitytUserName!identityFname!identityKnownAs!identityLname!identityEmail!identityNetworkId!enterpriseStartDate!employmentStartDate!enterpriseEndDate!PersonType!MgrPersonID!Location");
+fileWriter.println("identityCreated!identityAuth!idendityPersonID!identitytName!identitytUserName!identityFname!identityKnownAs!identityLname!identityEmail!identityNetworkId!enterpriseStartDate!employmentStartDate!enterpriseEndDate!PersonType!MgrPersonID!Location!DeptDesc");
 
 QueryOptions qo = new QueryOptions();  
 Iterator it = context.search(Identity.class,qo);  
@@ -59,6 +59,7 @@ while (it.hasNext()) {
     String identityPersonType="";
     String mgrPersonID = "";
     String identityLoc = "";
+    String identityDeptDesc = "";
 
     
 	// Get Identity attributes
@@ -77,6 +78,7 @@ while (it.hasNext()) {
   	try { identityCurrStartDate= identityObj.getStringAttribute("EMP_START_DATE");  } catch ( Exception e ) {} 
     try { identityLoc= identityObj.getStringAttribute("location");  } catch ( Exception e ) {} 
     try { mgrPersonID= identityObj.getManager().getStringAttribute("PERSON_ID");  } catch ( Exception e ) {} 
+    try { identityDeptDesc = identityObj.getManager().getStringAttribute("DEPT_NAME");  } catch ( Exception e ) {} 
     
     if ( identityObj.isCorrelated() )
         identityAuth = "Yes";
@@ -92,7 +94,7 @@ while (it.hasNext()) {
 	//Print row to a file   
     try {
         //System.out.println("****** " + dateFormat.format(identityCreated) + "!" + identitytName);
-        fileWriter.println(dateFormat.format(identityCreated) + "!" + identityAuth + "!" + idendityPersonID + "!" + identitytName + "!" + identitytUserName + "!" + identityFname + "!" + identityKnownAs + "!" + identityLname+ "!" + identityEmail + "!" + identityNetworkId + "!" + identityStartDate + "!" + identityCurrStartDate + "!" + identityEndDate + "!" +identityPersonType + "!" + mgrPersonID + "!" + identityLoc);
+        fileWriter.println(dateFormat.format(identityCreated) + "!" + identityAuth + "!" + idendityPersonID + "!" + identitytName + "!" + identitytUserName + "!" + identityFname + "!" + identityKnownAs + "!" + identityLname+ "!" + identityEmail + "!" + identityNetworkId + "!" + identityStartDate + "!" + identityCurrStartDate + "!" + identityEndDate + "!" +identityPersonType + "!" + mgrPersonID + "!" + identityLoc + "!" + identityDeptDesc);
     } catch(Exception e) {
         System.out.println("++++ " + identitytName);
     }
