@@ -1,0 +1,23 @@
+/*
+    Rule:  aci_TransformSalesforce
+    
+    Author:  Steve Nuffer
+	
+    Date:  November 30, 2016
+    Version:  1.0
+*/
+
+import org.apache.log4j.Logger; 
+import sailpoint.tools.Util;
+
+Logger logger = Logger.getLogger("com.aci.rule.aci_TransformSalesforce");
+String acctDeptNum = (String) object.get("ACI_Department_Number__c");  
+
+if ( Util.isNotNullOrEmpty(acctDeptNum) ) {
+    String deptNum = acctDeptNum.substring(0,acctDeptNum.indexOf("."));
+    object.put("ACI_Department_Number__c", deptNum);
+} else {
+    // No Department defined
+    logger.debug("No department found");
+}
+return object;
