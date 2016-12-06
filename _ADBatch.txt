@@ -1,0 +1,103 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<!DOCTYPE Rule PUBLIC "sailpoint.dtd" "sailpoint.dtd">
+<Rule created="" id="" language="beanshell" modified="" name="_ADBatch">
+  <Description>This rule can be executed in the console or in debug mode to return information </Description>
+  <Source>
+/*
+        Rule:  _ADBatch
+        Author:  Steve Nuffer
+	
+	
+	Version: 1.0
+
+*/
+import org.apache.log4j.Logger; 
+import sailpoint.object.*;
+import org.apache.jmeter.services.FileServer;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import sailpoint.tools.Util;
+
+String appName = "PRD Active Directory am.tsacorp.com";
+  
+String runningASUser = System.getProperty("user.name");
+
+Logger log = Logger.getLogger("com.aci.rule.aci_SourceMapping");
+String csvFileName = "\\\\cov6nas02\\slpprdxfr\\sailpoint\\_ADBatch." + runningASUser + ".csv";
+
+DateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd");
+
+// Create the File handle
+File csvFile = new File(csvFileName);
+try
+{    
+    fileWriter = new PrintWriter( new FileOutputStream( csvFile ));
+}
+catch ( Exception e )
+{
+    // User doesn't have permission to write    
+    return "Execute from Console OR the file is open";
+}
+
+System.out.println("****************  " + appName + "  ****************\n");
+Application app = context.getObjectByName(Application.class, appName);
+
+if (null == app) {  
+   log.error("Could not find application named:" + appName);  
+   return;  
+} 
+
+Filter qoFilter = Filter.eq("application", app);
+
+QueryOptions qo = new QueryOptions();  
+qo.addFilter(qoFilter);
+//qo.setOrderBy("accountName");  
+  
+//Print to a file
+//  Printer header to CSV file
+fileWriter.println("operation, application, nativeIdentity, identityName");	
+
+Iterator it = context.search(Link.class, qo);  
+while (it.hasNext()) {  
+    Link link = (Link) it.next();  
+
+    String identitytName  = "";
+
+    String acctSamName = "";
+    String acctDistName = "";
+
+
+	// Get Identity attributes
+	Identity identity = link.getIdentity();
+    try { identitytName  = identity.getDisplayName(); } catch ( Exception e ) {}
+
+	// Get application attributes
+    Attributes attributes = link.getAttributes();
+    try { acctSamName = attributes.getString("sAMAccountName"); } catch ( Exception e ) {}
+    try { acctDistName = attributes.getString("distinguishedName"); } catch ( Exception e ) {}
+    
+    if ( !Util.isNotNullOrEmpty(identitytName) ) identitytName = "None";
+    if ( !Util.isNotNullOrEmpty(acctSamName) ) acctSamName = "None";
+    if ( !Util.isNotNullOrEmpty(acctDistName) ) acctDistName = "None";
+
+	//Print row to a file   
+    try {
+        //System.out.println("****** " + dateFormat.format(identityCreated) + "!" + identitytName);
+        fileWriter.println("DisableAccount," + "\"" + appName + "\",\"" + acctDistName + "\"," + identitytName);
+        System.out.println("DisableAccount," + "\"" + appName + "\",\"" + acctDistName + "\"," + identitytName);
+        ;
+    } catch(Exception e) {
+        System.out.println("++++ " + identitytName);
+    }
+}  
+ 
+// Close File handles
+fileWriter.flush();
+fileWriter.close();
+
+sailpoint.tools.Util.flushIterator(it); 
+
+return "Contents saved to " + csvFileName + "    ***  Delimeter is ,  ***";
+
+</Source>
+</Rule>
