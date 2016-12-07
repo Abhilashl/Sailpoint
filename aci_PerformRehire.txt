@@ -2,8 +2,8 @@
     Rule:  aci_PerformRehire
     Author:  Steve Nuffer
 	
-    Date:  November 10, 2016	
-	Version: 1.11
+    Date:  December 7, 2016	
+	Version: 1.2
 
     if (Notify Y --> N) and ( (EMP_START_DATE > CurrentDate) OR (CURRENT_EMPLOYEE_FLAG N --> Y) )
     Send Rehire
@@ -68,8 +68,8 @@ if ( !("Y".equalsIgnoreCase(oldTermNotify) && "N".equalsIgnoreCase(newTermNotify
     return false;
 }
 
-// Start Date in the future or was in the past 
-if ( currentDate.before(startDate) || (!oldActive && newActive) ) {
+// Start Date in the future or was in the past
+if ( !currentDate.after(startDate) || (!oldActive && newActive) ) {
     // Rehire or Retro Rehire
     performLCM=true;
 }
