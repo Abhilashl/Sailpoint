@@ -1,0 +1,238 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<!DOCTYPE TaskDefinition PUBLIC "sailpoint.dtd" "sailpoint.dtd">
+<TaskDefinition created="1481214159371" executor="sailpoint.reporting.LiveReportExecutor" id="8a8596e458c64e290158df3e6a0b0072" modified="1481841275978" name="ACI - Identity Information Report" progressMode="Percentage" resultAction="Delete" subType="ACI" template="true" type="LiveReport">
+  <Attributes>
+    <Map>
+      <entry key="report">
+        <value>
+          <LiveReport title="Identity Information">
+            <DataSource defaultSort="name" objectType="Identity" type="Filter">
+              <QueryParameters>
+                <Parameter argument="identity" property="id"/>
+                <Parameter argument="manager" property="manager.id"/>
+                <Parameter argument="identityApplication" property="links.application.id"/>
+                <Parameter argument="inactive" property="inactive"/>
+              </QueryParameters>
+            </DataSource>
+            <ReportForm>
+              <Reference class="sailpoint.object.Form" id="8a8596e44b1301f9014b13029c9301e0" name="ACI - Identity Information Report Form"/>
+            </ReportForm>
+            <Columns>
+              <ReportColumnConfig field="created" header="Created" property="created" sortable="true" width="110"/>
+              <ReportColumnConfig field="correlated" header="Authoratative" property="correlated" sortable="true" width="110"/>
+              <ReportColumnConfig field="identityType" header="Identity Type" property="identityType" sortable="true" width="110"/>
+              <ReportColumnConfig field="personId" header="PersonID" property="personId" sortable="true" width="110"/>
+              <ReportColumnConfig field="identity" header="rept_user_details_col_identity" property="name" sortable="true" width="110"/>
+              <ReportColumnConfig field="lastName" header="rept_user_details_col_lastname" property="lastname" sortable="true" width="110"/>
+              <ReportColumnConfig field="firstName" header="rept_user_details_col_firstname" property="firstname" sortable="true" width="110"/>
+              <ReportColumnConfig field="personType" header="Person Type" property="personType" sortable="true" width="110"/>
+              <ReportColumnConfig field="location" header="Location" property="location" sortable="true" width="110"/>
+              <ReportColumnConfig field="email" header="Email" property="email" sortable="true" width="110"/>
+              <ReportColumnConfig field="networkId" header="NetworkID" property="networkId" sortable="true" width="110"/>
+              <ReportColumnConfig field="division" header="Division" hidden="true" property="division" sortable="true" width="110"/>
+              <ReportColumnConfig field="dept" header="Department" hidden="true" property="name" width="110">
+                <RenderScript>
+                  <Source>
+                                import sailpoint.object.Attributes;
+                                import sailpoint.object.Identity;
+
+                                Identity identity = context.getObjectByName(Identity.class,value);
+                    						String dept = identity.getAttribute("DEPT_NAME");
+                    						return dept;
+                  </Source>
+                </RenderScript>
+              </ReportColumnConfig>
+              <ReportColumnConfig field="company" header="Company" hidden="true" property="company" sortable="true" width="110"/>
+              <ReportColumnConfig field="Title" header="Title" hidden="true" property="employeeTitle" sortable="true" width="110"/>
+              <ReportColumnConfig field="rank" header="Rank" hidden="true" property="name" width="110">
+                <RenderScript>
+                  <Source>
+                                import sailpoint.object.Attributes;
+                                import sailpoint.object.Identity;
+
+                                Identity identity = context.getObjectByName(Identity.class,value);
+                    						String rank = identity.getAttribute("rank");
+                    						return rank;
+                  </Source>
+                </RenderScript>
+              </ReportColumnConfig>
+              <ReportColumnConfig field="phone" header="Phone" hidden="true" property="name" width="110">
+                <RenderScript>
+                  <Source>
+                                import sailpoint.object.Attributes;
+                                import sailpoint.object.Identity;
+
+                    						Identity identity = context.getObjectByName(Identity.class,value);
+                                String phone = identity.getAttribute("WORK_TELEPHONE");
+                    						return phone;
+                  </Source>
+                </RenderScript>
+              </ReportColumnConfig>
+              <ReportColumnConfig field="country" header="Country" hidden="true" property="country" sortable="true" width="110"/>
+              <ReportColumnConfig field="address" header="Address" hidden="true" property="name" width="110">
+                <RenderScript>
+                  <Source>
+                                import sailpoint.object.Attributes;
+                                import sailpoint.object.Identity;
+
+                                Identity identity = context.getObjectByName(Identity.class,value);
+                    						String address = identity.getAttribute("address");
+                    						return address;
+                  </Source>
+                </RenderScript>
+              </ReportColumnConfig>
+              <ReportColumnConfig field="region" header="Region" hidden="true" property="name" width="110">
+                <RenderScript>
+                  <Source>
+                                import sailpoint.object.Attributes;
+                                import sailpoint.object.Identity;
+
+                                Identity identity = context.getObjectByName(Identity.class,value);
+                    						String region = identity.getAttribute("region");
+                    						return region;
+                  </Source>
+                </RenderScript>
+              </ReportColumnConfig>
+              <ReportColumnConfig field="city" header="City" hidden="true" property="name" width="110">
+                <RenderScript>
+                  <Source>
+                                import sailpoint.object.Attributes;
+                                import sailpoint.object.Identity;
+
+                                Identity identity = context.getObjectByName(Identity.class,value);
+                    						String city = identity.getAttribute("city");
+                    						return city;
+                  </Source>
+                </RenderScript>
+              </ReportColumnConfig>
+              <ReportColumnConfig field="postalCode" header="Postal Code" hidden="true" property="name" width="110">
+                <RenderScript>
+                  <Source>
+                                import sailpoint.object.Attributes;
+                                import sailpoint.object.Identity;
+
+                                Identity identity = context.getObjectByName(Identity.class,value);
+                    						String postalCode = identity.getAttribute("postalCode");
+                    						return postalCode;
+                  </Source>
+                </RenderScript>
+              </ReportColumnConfig>
+              <ReportColumnConfig field="startDate" header="Employment Start" hidden="true" property="name" width="110">
+                <RenderScript>
+                  <Source>
+                                import sailpoint.object.Attributes;
+                                import sailpoint.object.Identity;
+
+                                Identity identity = context.getObjectByName(Identity.class,value);
+                    						String startDate = identity.getAttribute("EMP_START_DATE");
+                    						return startDate;
+                  </Source>
+                </RenderScript>
+              </ReportColumnConfig>
+              <ReportColumnConfig field="enterpriseStartDate" header="Enterprise Start Date" hidden="true" property="name" width="110">
+                <RenderScript>
+                  <Source>
+                                import sailpoint.object.Attributes;
+                                import sailpoint.object.Identity;
+
+                                Identity identity = context.getObjectByName(Identity.class,value);
+                    						String enterpriseStartDate = identity.getAttribute("enterpriseStartDate");
+                    						return enterpriseStartDate;
+                  </Source>
+                </RenderScript>
+              </ReportColumnConfig>
+              <ReportColumnConfig field="enterpriseEndDate" header="Enterprise End Date" hidden="true" property="name" width="110">
+                <RenderScript>
+                  <Source>
+                                import sailpoint.object.Attributes;
+                                import sailpoint.object.Identity;
+
+                                Identity identity = context.getObjectByName(Identity.class,value);
+                    						String enterpriseEndDate = identity.getAttribute("enterpriseEndDate");
+                    						return enterpriseEndDate;
+                  </Source>
+                </RenderScript>
+              </ReportColumnConfig>
+              <ReportColumnConfig field="active" header="Active" hidden="true" property="name" width="110">
+                <RenderScript>
+                  <Source>
+                                import sailpoint.object.Attributes;
+                                import sailpoint.object.Identity;
+
+                                Identity identity = context.getObjectByName(Identity.class,value);
+                    						boolean active = !identity.isInactive();
+                    						return active;
+                  </Source>
+                </RenderScript>
+              </ReportColumnConfig>
+              <ReportColumnConfig field="termNotification" header="TERM Notification" hidden="true" property="name" width="110">
+                <RenderScript>
+                  <Source>
+                                import sailpoint.object.Attributes;
+                                import sailpoint.object.Identity;
+
+                                Identity identity = context.getObjectByName(Identity.class,value);
+                    						String termNotification = identity.getAttribute("termNotification");
+                    						return termNotification;
+                  </Source>
+                </RenderScript>
+              </ReportColumnConfig>
+              <ReportColumnConfig field="dob" header="Date of Birth" hidden="true" property="name" width="110">
+                <RenderScript>
+                  <Source>
+                                import sailpoint.object.Attributes;
+                                import sailpoint.object.Identity;
+
+                                Identity identity = context.getObjectByName(Identity.class,value);
+                    						String dob = identity.getAttribute("DATE_OF_BIRTH");
+                    						return dob;
+                  </Source>
+                </RenderScript>
+              </ReportColumnConfig>
+              <ReportColumnConfig field="irsStatus" header="IRS Status" hidden="true" property="irsStatus" width="110"/>
+              <ReportColumnConfig field="irsCertDate" header="IRS Cert Date" hidden="true" property="irsCertDate" width="110"/>
+            </Columns>
+            <InitializationRule>
+              <Reference class="sailpoint.object.Rule" id="8a8596e458c64e290158f8d13c8600b4" name="ACI - Identity Information Report Rule"/>
+            </InitializationRule>
+          </LiveReport>
+        </value>
+      </entry>
+    </Map>
+  </Attributes>
+  <Description>A list of Identities and their attributes.  Sort and filter the information.</Description>
+  <RequiredRights>
+    <Reference class="sailpoint.object.SPRight" id="8a8596e44b1301f9014b1302429e0059" name="FullAccessApplicationUserReport"/>
+  </RequiredRights>
+  <Signature>
+    <Inputs>
+      <Argument multi="true" name="groupDefinitions" type="string">
+        <Description>rept_input_user_report_group_definition</Description>
+      </Argument>
+      <Argument name="firstname" type="string">
+        <Description>rept_input_user_report_fname</Description>
+      </Argument>
+      <Argument name="lastname" type="string">
+        <Description>rept_input_user_report_lname</Description>
+      </Argument>
+      <Argument name="inactive" type="boolean">
+        <Description>rept_input_user_report_inactive</Description>
+      </Argument>
+      <Argument name="email" type="string">
+        <Description>rept_input_user_report_email</Description>
+      </Argument>
+      <Argument multi="true" name="identityApplication" type="Application">
+        <Description>rept_input_user_report_apps</Description>
+      </Argument>
+      <Argument filterString="managerStatus == true" multi="true" name="manager" type="Identity">
+        <Description>Manager Name</Description>
+      </Argument>
+      <Argument name="email" type="string">
+        <Description>rept_input_user_report_email</Description>
+      </Argument>
+      <Argument multi="true" name="identityApplication" type="Application">
+        <Description>rept_input_user_report_apps</Description>
+      </Argument>
+    </Inputs>
+  </Signature>
+</TaskDefinition>
