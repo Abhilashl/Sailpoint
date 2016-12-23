@@ -18,6 +18,8 @@
     IRS Certification Date:  $irsCertDate
 #end
 &lt;br>
+    Term Date:   $termDate
+&lt;br>
     Manager:        $managerName
     Manager Email:  $managerEmail
 
