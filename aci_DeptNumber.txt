@@ -3,15 +3,33 @@
     
     Author:  Steve Nuffer
 	
-    Date:  November 11, 2016
-    Version:  1.1
+    Date:  December 3, 2016
+    Version:  1.22
 
 */
 import org.apache.log4j.Logger; 
 import sailpoint.object.*;
 import sailpoint.tools.Util;
+import java.lang.Double;
 
-String tmpDeptNum = value.replaceAll("[^0-9]", " ");
-String deptNum = tmpDeptNum.substring(0, tmpDeptNum.indexOf(' '));
+Logger  logger = Logger.getLogger("com.aci.aci_DeptNumber");
+logger.debug("aci_DeptNumber");
+logger.debug("    value=" + value);
 
-return deptNum;
+if ( Util.isNotNullOrEmpty(value) ) {
+    logger.debug("    Value not null");
+    String tmpDeptNum = value.replaceAll("[^0-9]", " ");
+    
+    // Fusion - Start of Desc
+    String deptNum = tmpDeptNum.substring(0, tmpDeptNum.indexOf(' '));
+    
+    if ( !Util.isNotNullOrEmpty(deptNum)) {
+        // Oracle 11i - End of Desc
+        deptNum = tmpDeptNum.substring(tmpDeptNum.lastIndexOf(" ")+1);
+    }
+    return deptNum;
+    //return Double.parseDouble(deptNum);
+} else {
+    logger.debug("    Value null");
+    return;
+}
