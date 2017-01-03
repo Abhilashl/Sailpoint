@@ -18,7 +18,9 @@
     IRS Certification Date:  $irsCertDate
 #end
 &lt;br>
+&lt;font color="red">
     Term Date:   $termDate
+&lt;/font>
 &lt;br>
     Manager:        $managerName
     Manager Email:  $managerEmail
