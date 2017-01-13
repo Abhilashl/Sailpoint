@@ -1,6 +1,6 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <!DOCTYPE Form PUBLIC "sailpoint.dtd" "sailpoint.dtd">
-<Form created="1421953113235" hidden="true" id="8a8596e44b1301f9014b13029c9301e0" modified="1481841296900" name="ACI - Identity Information Report Form" type="Report">
+<Form created="1481841572084" hidden="true" id="8a85948558c3f169015904a3f8f450b5" modified="1484248621152" name="ACI - Identity Information Report Form" type="Report">
   <Section columns="2" label="rept_account_attrs_section_identity_attrs" name="Identity Attributes"/>
   <Section columns="2" label="rept_account_attrs_section_identity_extended" name="Identity Extended Attributes"/>
   <Section columns="2" label="rept_account_attrs_section_props" name="Identity Properties">
@@ -22,5 +22,229 @@
       </Attributes>
     </Field>
     <Field columnSpan="1" displayName="rept_account_attrs_field_scopes_caps" helpKey="rept_account_attrs_help_scopes_caps" name="showScopes" type="boolean" value="ref:showScopes"/>
+    <Field displayName="Identity Type" helpKey="The type of identity." multi="true" name="identityType" type="string" value="ref:identityType">
+      <AllowedValuesDefinition>
+        <Script>
+          <Source>
+            
+import sailpoint.object.*;
+import java.util.Iterator;  
+
+List items = new ArrayList();  
+
+QueryOptions queryOptions = new QueryOptions(); 
+
+queryOptions.setDistinct(true);
+queryOptions.addOrdering("identityType",true);
+
+List props = new ArrayList();
+props.add("identityType");
+
+Iterator it = context.search(Identity.class, queryOptions, props);
+
+if ( null != it ) {
+    while(it.hasNext()){  
+        String value = (String) it.next() [0] ;
+        items.add(value);
+    }
+}
+
+return items;
+</Source>
+        </Script>
+      </AllowedValuesDefinition>
+    </Field>
+    <Field displayName="IRS Status" helpKey="Status of IRS certification process." multi="true" name="irsStatus" type="string" value="ref:irsStatus">
+      <AllowedValuesDefinition>
+        <Script>
+          <Source>
+            
+import sailpoint.object.*;
+import java.util.Iterator;  
+
+List items = new ArrayList();  
+
+QueryOptions queryOptions = new QueryOptions(); 
+
+queryOptions.setDistinct(true);
+queryOptions.addOrdering("irsStatus",true);
+
+List props = new ArrayList();
+props.add("irsStatus");
+
+Iterator it = context.search(Identity.class, queryOptions, props);
+
+if ( null != it ) {
+    while(it.hasNext()){  
+        String value = (String) it.next() [0] ;
+        items.add(value);
+    }
+}
+
+return items;
+</Source>
+        </Script>
+      </AllowedValuesDefinition>
+    </Field>
+    <Field displayName="Company" helpKey="Company of employee or contingent." multi="true" name="company" type="string" value="ref:company">
+      <AllowedValuesDefinition>
+        <Script>
+          <Source>
+            
+import sailpoint.object.*;
+import java.util.Iterator;  
+
+List items = new ArrayList();  
+
+QueryOptions queryOptions = new QueryOptions(); 
+
+queryOptions.setDistinct(true);
+queryOptions.addOrdering("company",true);
+
+List props = new ArrayList();
+props.add("company");
+
+Iterator it = context.search(Identity.class, queryOptions, props);
+
+if ( null != it ) {
+    while(it.hasNext()){  
+        String value = (String) it.next() [0] ;
+        items.add(value);
+    }
+}
+
+return items;
+</Source>
+        </Script>
+      </AllowedValuesDefinition>
+    </Field>
+    <Field displayName="Person Type" helpKey="HR&apos;s defined person type" multi="true" name="personType" type="string" value="ref:personType">
+      <AllowedValuesDefinition>
+        <Script>
+          <Source>
+            
+import sailpoint.object.*;
+import java.util.Iterator;  
+
+List items = new ArrayList();  
+
+QueryOptions queryOptions = new QueryOptions(); 
+
+queryOptions.setDistinct(true);
+queryOptions.addOrdering("personType",true);
+
+List props = new ArrayList();
+props.add("personType");
+
+Iterator it = context.search(Identity.class, queryOptions, props);
+
+if ( null != it ) {
+    while(it.hasNext()){  
+        String value = (String) it.next() [0] ;
+        items.add(value);
+    }
+}
+
+return items;
+</Source>
+        </Script>
+      </AllowedValuesDefinition>
+    </Field>
+    <Field displayName="Country" helpKey="Country of individual" multi="true" name="country" type="string" value="ref:country">
+      <AllowedValuesDefinition>
+        <Script>
+          <Source>
+            
+import sailpoint.object.*;
+import java.util.Iterator;  
+
+List items = new ArrayList();  
+
+QueryOptions queryOptions = new QueryOptions(); 
+
+queryOptions.setDistinct(true);
+queryOptions.addOrdering("country",true);
+
+List props = new ArrayList();
+props.add("country");
+
+Iterator it = context.search(Identity.class, queryOptions, props);
+
+if ( null != it ) {
+    while(it.hasNext()){  
+        String value = (String) it.next() [0] ;
+        items.add(value);
+    }
+}
+
+return items;
+</Source>
+        </Script>
+      </AllowedValuesDefinition>
+    </Field>
+    <Field displayName="Division" helpKey="Division of individual" multi="true" name="division" type="string" value="ref:division">
+      <AllowedValuesDefinition>
+        <Script>
+          <Source>
+            
+import sailpoint.object.*;
+import java.util.Iterator;  
+
+List items = new ArrayList();  
+
+QueryOptions queryOptions = new QueryOptions(); 
+
+queryOptions.setDistinct(true);
+queryOptions.addOrdering("division",true);
+
+List props = new ArrayList();
+props.add("division");
+
+Iterator it = context.search(Identity.class, queryOptions, props);
+
+if ( null != it ) {
+    while(it.hasNext()){  
+        String value = (String) it.next() [0] ;
+        items.add(value);
+    }
+}
+
+return items;
+</Source>
+        </Script>
+      </AllowedValuesDefinition>
+    </Field>
+    <Field displayName="Location" helpKey="Location of individual" multi="true" name="location" type="string" value="ref:location">
+      <AllowedValuesDefinition>
+        <Script>
+          <Source>
+            
+import sailpoint.object.*;
+import java.util.Iterator;  
+
+List items = new ArrayList();  
+
+QueryOptions queryOptions = new QueryOptions(); 
+
+queryOptions.setDistinct(true);
+queryOptions.addOrdering("location",true);
+
+List props = new ArrayList();
+props.add("location");
+
+Iterator it = context.search(Identity.class, queryOptions, props);
+
+if ( null != it ) {
+    while(it.hasNext()){  
+        String value = (String) it.next() [0] ;
+        items.add(value);
+    }
+}
+
+return items;
+</Source>
+        </Script>
+      </AllowedValuesDefinition>
+    </Field>
   </Section>
 </Form>

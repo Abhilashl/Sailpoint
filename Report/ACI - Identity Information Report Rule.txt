@@ -1,6 +1,6 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <!DOCTYPE Rule PUBLIC "sailpoint.dtd" "sailpoint.dtd">
-<Rule created="1481643211910" id="8a8596e458c64e290158f8d13c8600b4" language="beanshell" modified="1481841310978" name="ACI - Identity Information Report Rule" type="ReportCustomizer">
+<Rule created="1481841601006" id="8a85948558c3f169015904a469ee50b6" language="beanshell" modified="1484248575965" name="ACI - Identity Information Report Rule" type="ReportCustomizer">
   <Description>
     This rule populates a form with fields for the standard and extended identity attributes.
   </Description>
@@ -38,14 +38,27 @@
         List extendedAttrs = new ArrayList();
         for(ObjectAttribute att : identityConfig.getSearchableAttributes()){
           if (!att.isStandard())
-            extendedAttrs.add(att);
+            if ( !att.name.equals("identityType") ) 
+              if ( !att.name.equals("irsStatus") )
+                  if (!att.name.equals("company") ) 
+                      if ( !att.name.equals("personType"))
+            						if ( !att.name.equals("country"))
+            						   if ( !att.name.equals("division"))
+            								  if ( !att.name.equals("location"))
+                          extendedAttrs.add(att);
         }
 
         for(ObjectAttribute att : identityConfig.getMultiAttributeList()){
-          	extendedAttrs.add(att);
+            if ( !att.name.equals("identityType") ) 
+              if ( !att.name.equals("irsStatus") )
+                  if (!att.name.equals("company") ) 
+                      if ( !att.name.equals("personType"))
+                         if ( !att.name.equals("country"))
+            						   if ( !att.name.equals("division"))
+            								  if ( !att.name.equals("location"))
+                          extendedAttrs.add(att);
         }
 
-        ReportingLibrary.addAttributes(context, report, Identity.class, extendedAttrs, null,
-          "Identity Extended Attributes", locale, "id");
+        ReportingLibrary.addAttributes(context, report, Identity.class, extendedAttrs, null, "Identity Extended Attributes", locale, "id");
 </Source>
 </Rule>

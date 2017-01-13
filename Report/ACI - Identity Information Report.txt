@@ -1,6 +1,6 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <!DOCTYPE TaskDefinition PUBLIC "sailpoint.dtd" "sailpoint.dtd">
-<TaskDefinition created="1481214159371" executor="sailpoint.reporting.LiveReportExecutor" id="8a8596e458c64e290158df3e6a0b0072" modified="1481841275978" name="ACI - Identity Information Report" progressMode="Percentage" resultAction="Delete" subType="ACI" template="true" type="LiveReport">
+<TaskDefinition created="1481841694539" executor="sailpoint.reporting.LiveReportExecutor" id="8a85948558c3f169015904a5d74b50b7" modified="1484250798471" name="ACI - Identity Information Report" progressMode="Percentage" resultAction="Delete" subType="ACI" template="true" type="LiveReport">
   <Attributes>
     <Map>
       <entry key="report">
@@ -12,10 +12,17 @@
                 <Parameter argument="manager" property="manager.id"/>
                 <Parameter argument="identityApplication" property="links.application.id"/>
                 <Parameter argument="inactive" property="inactive"/>
+                <Parameter argument="identityType" property="identityType"/>
+                <Parameter argument="irsStatus" property="irsStatus"/>
+                <Parameter argument="company" property="company"/>
+                <Parameter argument="personType" property="personType"/>
+                <Parameter argument="country" property="country"/>
+                <Parameter argument="division" property="division"/>
+                <Parameter argument="location" property="location"/>
               </QueryParameters>
             </DataSource>
             <ReportForm>
-              <Reference class="sailpoint.object.Form" id="8a8596e44b1301f9014b13029c9301e0" name="ACI - Identity Information Report Form"/>
+              <Reference class="sailpoint.object.Form" id="8a85948558c3f169015904a3f8f450b5" name="ACI - Identity Information Report Form"/>
             </ReportForm>
             <Columns>
               <ReportColumnConfig field="created" header="Created" property="created" sortable="true" width="110"/>
@@ -29,41 +36,45 @@
               <ReportColumnConfig field="location" header="Location" property="location" sortable="true" width="110"/>
               <ReportColumnConfig field="email" header="Email" property="email" sortable="true" width="110"/>
               <ReportColumnConfig field="networkId" header="NetworkID" property="networkId" sortable="true" width="110"/>
-              <ReportColumnConfig field="division" header="Division" hidden="true" property="division" sortable="true" width="110"/>
-              <ReportColumnConfig field="dept" header="Department" hidden="true" property="name" width="110">
+              <ReportColumnConfig field="manager" header="Manager" hidden="true" property="name" sortable="true" width="110">
                 <RenderScript>
                   <Source>
                                 import sailpoint.object.Attributes;
                                 import sailpoint.object.Identity;
 
-                                Identity identity = context.getObjectByName(Identity.class,value);
-                    						String dept = identity.getAttribute("DEPT_NAME");
-                    						return dept;
+                                Identity identityObj = context.getObjectByName(Identity.class,value);
+                                                                
+                                String managerName = "";
+                                try { managerName  = identityObj.getManager().getDisplayName(); } catch ( Exception e ) {} 
+                    
+                    						return managerName;
+                  </Source>
+                </RenderScript>
+              </ReportColumnConfig>
+              <ReportColumnConfig field="division" header="Division" hidden="true" property="division" sortable="true" width="110"/>
+              <ReportColumnConfig field="department" header="Department" hidden="true" property="name" width="110">
+                <RenderScript>
+                  <Source>
+                                import sailpoint.object.Attributes;
+                                import sailpoint.object.Identity;
+
+                                Identity identityObj = context.getObjectByName(Identity.class,value);
+                    						String identityDept = identityObj.getAttribute("DEPT_NAME");
+                    						return identityDept;
                   </Source>
                 </RenderScript>
               </ReportColumnConfig>
               <ReportColumnConfig field="company" header="Company" hidden="true" property="company" sortable="true" width="110"/>
-              <ReportColumnConfig field="Title" header="Title" hidden="true" property="employeeTitle" sortable="true" width="110"/>
-              <ReportColumnConfig field="rank" header="Rank" hidden="true" property="name" width="110">
-                <RenderScript>
-                  <Source>
-                                import sailpoint.object.Attributes;
-                                import sailpoint.object.Identity;
-
-                                Identity identity = context.getObjectByName(Identity.class,value);
-                    						String rank = identity.getAttribute("rank");
-                    						return rank;
-                  </Source>
-                </RenderScript>
-              </ReportColumnConfig>
+              <ReportColumnConfig field="title" header="Title" hidden="true" property="employeeTitle" sortable="true" width="110"/>
+              <ReportColumnConfig field="rank" header="Rank" hidden="true" property="rank" sortable="true" width="110"/>
               <ReportColumnConfig field="phone" header="Phone" hidden="true" property="name" width="110">
                 <RenderScript>
                   <Source>
                                 import sailpoint.object.Attributes;
                                 import sailpoint.object.Identity;
 
-                    						Identity identity = context.getObjectByName(Identity.class,value);
-                                String phone = identity.getAttribute("WORK_TELEPHONE");
+                    						Identity identityObj = context.getObjectByName(Identity.class,value);
+                                String phone = identityObj.getAttribute("WORK_TELEPHONE");
                     						return phone;
                   </Source>
                 </RenderScript>
@@ -75,8 +86,8 @@
                                 import sailpoint.object.Attributes;
                                 import sailpoint.object.Identity;
 
-                                Identity identity = context.getObjectByName(Identity.class,value);
-                    						String address = identity.getAttribute("address");
+                                Identity identityObj = context.getObjectByName(Identity.class,value);
+                    						String address = identityObj.getAttribute("address");
                     						return address;
                   </Source>
                 </RenderScript>
@@ -87,8 +98,8 @@
                                 import sailpoint.object.Attributes;
                                 import sailpoint.object.Identity;
 
-                                Identity identity = context.getObjectByName(Identity.class,value);
-                    						String region = identity.getAttribute("region");
+                                Identity identityObj = context.getObjectByName(Identity.class,value);
+                    						String region = identityObj.getAttribute("region");
                     						return region;
                   </Source>
                 </RenderScript>
@@ -99,8 +110,8 @@
                                 import sailpoint.object.Attributes;
                                 import sailpoint.object.Identity;
 
-                                Identity identity = context.getObjectByName(Identity.class,value);
-                    						String city = identity.getAttribute("city");
+                                Identity identityObj = context.getObjectByName(Identity.class,value);
+                    						String city = identityObj.getAttribute("city");
                     						return city;
                   </Source>
                 </RenderScript>
@@ -111,8 +122,8 @@
                                 import sailpoint.object.Attributes;
                                 import sailpoint.object.Identity;
 
-                                Identity identity = context.getObjectByName(Identity.class,value);
-                    						String postalCode = identity.getAttribute("postalCode");
+                                Identity identityObj = context.getObjectByName(Identity.class,value);
+                    						String postalCode = identityObj.getAttribute("postalCode");
                     						return postalCode;
                   </Source>
                 </RenderScript>
@@ -123,8 +134,8 @@
                                 import sailpoint.object.Attributes;
                                 import sailpoint.object.Identity;
 
-                                Identity identity = context.getObjectByName(Identity.class,value);
-                    						String startDate = identity.getAttribute("EMP_START_DATE");
+                                Identity identityObj = context.getObjectByName(Identity.class,value);
+                    						String startDate = identityObj.getAttribute("EMP_START_DATE");
                     						return startDate;
                   </Source>
                 </RenderScript>
@@ -135,8 +146,8 @@
                                 import sailpoint.object.Attributes;
                                 import sailpoint.object.Identity;
 
-                                Identity identity = context.getObjectByName(Identity.class,value);
-                    						String enterpriseStartDate = identity.getAttribute("enterpriseStartDate");
+                                Identity identityObj = context.getObjectByName(Identity.class,value);
+                    						String enterpriseStartDate = identityObj.getAttribute("enterpriseStartDate");
                     						return enterpriseStartDate;
                   </Source>
                 </RenderScript>
@@ -147,8 +158,8 @@
                                 import sailpoint.object.Attributes;
                                 import sailpoint.object.Identity;
 
-                                Identity identity = context.getObjectByName(Identity.class,value);
-                    						String enterpriseEndDate = identity.getAttribute("enterpriseEndDate");
+                                Identity identityObj = context.getObjectByName(Identity.class,value);
+                    						String enterpriseEndDate = identityObj.getAttribute("enterpriseEndDate");
                     						return enterpriseEndDate;
                   </Source>
                 </RenderScript>
@@ -159,8 +170,8 @@
                                 import sailpoint.object.Attributes;
                                 import sailpoint.object.Identity;
 
-                                Identity identity = context.getObjectByName(Identity.class,value);
-                    						boolean active = !identity.isInactive();
+                                Identity identityObj = context.getObjectByName(Identity.class,value);
+                    						boolean active = !identityObj.isInactive();
                     						return active;
                   </Source>
                 </RenderScript>
@@ -171,8 +182,8 @@
                                 import sailpoint.object.Attributes;
                                 import sailpoint.object.Identity;
 
-                                Identity identity = context.getObjectByName(Identity.class,value);
-                    						String termNotification = identity.getAttribute("termNotification");
+                                Identity idenidentityObjtity = context.getObjectByName(Identity.class,value);
+                    						String termNotification = identityObj.getAttribute("termNotification");
                     						return termNotification;
                   </Source>
                 </RenderScript>
@@ -183,9 +194,93 @@
                                 import sailpoint.object.Attributes;
                                 import sailpoint.object.Identity;
 
-                                Identity identity = context.getObjectByName(Identity.class,value);
-                    						String dob = identity.getAttribute("DATE_OF_BIRTH");
+                                Identity identityObj = context.getObjectByName(Identity.class,value);
+                    						String dob = identityObj.getAttribute("DATE_OF_BIRTH");
                     						return dob;
+                  </Source>
+                </RenderScript>
+              </ReportColumnConfig>
+              <ReportColumnConfig field="workflowJoinDate" header="Workflow Joiner Date" hidden="true" property="name" width="110">
+                <RenderScript>
+                  <Source>
+                                import sailpoint.object.*;
+                                import java.util.Iterator;  
+                                import java.text.DateFormat;
+                                import java.text.SimpleDateFormat;
+
+                    						Identity identityObj = context.getObjectByName(Identity.class,value);
+                    
+																List returnObj = new ArrayList();  
+                                QueryOptions queryOptions = new QueryOptions(); 
+                                queryOptions.addFilter(Filter.eq("action", "identityLifecycleEvent"));  
+                                queryOptions.addFilter(Filter.eq("source", "Refresh Identity Cube"));
+                                queryOptions.addFilter(Filter.eq("string1", "Fusion Joiner"));
+                                queryOptions.addFilter(Filter.eq("target", "Identity:" + identityObj.name));
+                    						queryOptions.addOrdering("created",false);
+                                
+                                DateFormat dateFormat = new SimpleDateFormat("MM/dd/yyyy");
+                                Iterator auditEvents = context.search(AuditEvent.class, queryOptions);
+
+                                 while(auditEvents.hasNext()){  
+                                    auditEvent = auditEvents.next();  
+                                    return dateFormat.format(auditEvent.getCreated()) ;
+                                }                                                
+                  </Source>
+                </RenderScript>
+              </ReportColumnConfig>
+              <ReportColumnConfig field="workflowTermDate" header="Workflow Leaver Date" hidden="true" property="name" width="110">
+                <RenderScript>
+                  <Source>
+                                import sailpoint.object.*;
+                                import java.util.Iterator;  
+                                import java.text.DateFormat;
+                                import java.text.SimpleDateFormat;
+
+                    						Identity identityObj = context.getObjectByName(Identity.class,value);
+                    
+																List returnObj = new ArrayList();  
+                                QueryOptions queryOptions = new QueryOptions(); 
+                                queryOptions.addFilter(Filter.eq("action", "identityLifecycleEvent"));  
+                                queryOptions.addFilter(Filter.eq("source", "Refresh Identity Cube"));
+                                queryOptions.addFilter(Filter.eq("string1", "Fusion Leaver"));
+                                queryOptions.addFilter(Filter.eq("target", "Identity:" + identityObj.name));
+                    						queryOptions.addOrdering("created",false);
+                                
+                                DateFormat dateFormat = new SimpleDateFormat("MM/dd/yyyy");
+                                Iterator auditEvents = context.search(AuditEvent.class, queryOptions);
+
+                                 while(auditEvents.hasNext()){  
+                                    auditEvent = auditEvents.next();  
+                                    return dateFormat.format(auditEvent.getCreated()) ;
+                                }                                                
+                  </Source>
+                </RenderScript>
+              </ReportColumnConfig>
+              <ReportColumnConfig field="workflowTermRemedyDate" header="Workflow Leaver RemedyForce Date" hidden="true" property="name" width="110">
+                <RenderScript>
+                  <Source>
+                                import sailpoint.object.*;
+                                import java.util.Iterator;  
+                                import java.text.DateFormat;
+                                import java.text.SimpleDateFormat;
+
+                    						Identity identityObj = context.getObjectByName(Identity.class,value);
+                    
+																List returnObj = new ArrayList();  
+                                QueryOptions queryOptions = new QueryOptions(); 
+                                queryOptions.addFilter(Filter.eq("action", "identityLifecycleEvent"));  
+                                queryOptions.addFilter(Filter.eq("source", "Refresh Identity Cube"));
+                                queryOptions.addFilter(Filter.eq("string1", "Fusion Leaver RemedyForce"));
+                                queryOptions.addFilter(Filter.eq("target", "Identity:" + identityObj.name));
+                    						queryOptions.addOrdering("created",false);
+                                
+                                DateFormat dateFormat = new SimpleDateFormat("MM/dd/yyyy");
+                                Iterator auditEvents = context.search(AuditEvent.class, queryOptions);
+
+                                 while(auditEvents.hasNext()){  
+                                    auditEvent = auditEvents.next();  
+                                    return dateFormat.format(auditEvent.getCreated()) ;
+                                }                                                
                   </Source>
                 </RenderScript>
               </ReportColumnConfig>
@@ -193,7 +288,7 @@
               <ReportColumnConfig field="irsCertDate" header="IRS Cert Date" hidden="true" property="irsCertDate" width="110"/>
             </Columns>
             <InitializationRule>
-              <Reference class="sailpoint.object.Rule" id="8a8596e458c64e290158f8d13c8600b4" name="ACI - Identity Information Report Rule"/>
+              <Reference class="sailpoint.object.Rule" id="8a85948558c3f169015904a469ee50b6" name="ACI - Identity Information Report Rule"/>
             </InitializationRule>
           </LiveReport>
         </value>
@@ -202,7 +297,7 @@
   </Attributes>
   <Description>A list of Identities and their attributes.  Sort and filter the information.</Description>
   <RequiredRights>
-    <Reference class="sailpoint.object.SPRight" id="8a8596e44b1301f9014b1302429e0059" name="FullAccessApplicationUserReport"/>
+    <Reference class="sailpoint.object.SPRight" id="8a8594824ddf1ff8014ddf202abd0060" name="FullAccessApplicationUserReport"/>
   </RequiredRights>
   <Signature>
     <Inputs>
@@ -232,6 +327,27 @@
       </Argument>
       <Argument multi="true" name="identityApplication" type="Application">
         <Description>rept_input_user_report_apps</Description>
+      </Argument>
+      <Argument multi="true" name="identityType" type="string">
+        <Description>The type of identity.</Description>
+      </Argument>
+      <Argument multi="true" name="irsStatus" type="string">
+        <Description>Status of IRS certification.</Description>
+      </Argument>
+      <Argument multi="true" name="company" type="string">
+        <Description>Company the individual works for.</Description>
+      </Argument>
+      <Argument multi="true" name="personType" type="string">
+        <Description>Person type within HR.</Description>
+      </Argument>
+      <Argument multi="true" name="country" type="string">
+        <Description>Country of individual.</Description>
+      </Argument>
+      <Argument multi="true" name="division" type="string">
+        <Description>Division of individual.</Description>
+      </Argument>
+      <Argument multi="true" name="location" type="string">
+        <Description>Location of individual.</Description>
       </Argument>
     </Inputs>
   </Signature>
